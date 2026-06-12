@@ -1,508 +1,135 @@
-// Pool de Perguntas para o Teste de Afinidade (50 Perguntas - Bilingue 💖)
+// Pool de Perguntas para o Teste de Afinidade (64 Perguntas - Bilingue 💖)
 const coupleQuestionsPool = {
   pt: [
-    {
-      id: 1,
-      text: "Quem cozinha melhor?",
-      options: ["Eu", "Você", "Nós dois mandamos bem", "A gente só sobrevive de delivery"]
-    },
-    {
-      id: 2,
-      text: "Quem gasta mais dinheiro com besteira?",
-      options: ["Eu", "Você", "Os dois gastam igual", "Nenhum, somos pão-duros"]
-    },
-    {
-      id: 3,
-      text: "Quem pede desculpa primeiro depois de uma briga?",
-      options: ["Eu", "Você", "Quem estiver errado", "A gente finge que não aconteceu"]
-    },
-    {
-      id: 4,
-      text: "Quem é mais teimoso?",
-      options: ["Eu", "Você", "É um empate", "Depende totalmente do assunto"]
-    },
-    {
-      id: 5,
-      text: "Qual é o tipo de comida favorito de {player}?",
-      options: ["Pizza e Hambúrguer", "Sushi e comida asiática", "Comida caseira", "Comida chique"]
-    },
-    {
-      id: 6,
-      text: "Qual é o fim de semana ideal de {player}?",
-      options: ["Ficar na cama vendo filme", "Sair e ir pra festa", "Explorar um lugar novo", "Ficar com amigos/família"]
-    },
-    {
-      id: 7,
-      text: "Quem é o bagunceiro da relação?",
-      options: ["Eu", "Você", "Nós dois somos bagunceiros", "Nós dois somos maníacos por limpeza"]
-    },
-    {
-      id: 8,
-      text: "Qual frase nos descreve melhor?",
-      options: ["Os opostos se atraem", "Almas gêmeas (somos muito parecidos)", "Sempre rindo juntos", "Parceiros no crime"]
-    },
-    {
-      id: 9,
-      text: "Qual é a cor favorita de {player} para vestir?",
-      options: ["Preto e cores neutras", "Cores vivas e chamativas", "Azul e tons frios", "Tons terrosos"]
-    },
-    {
-      id: 10,
-      text: "Como {player} fica quando está com fome?",
-      options: ["Irritado e estressado (hangry)", "Muito quieto", "Chorão e dramático", "Normal, só come"]
-    },
-    {
-      id: 11,
-      text: "Quem é mais romântico?",
-      options: ["Eu", "Você", "Ambos", "Nenhum de nós é meloso"]
-    },
-    {
-      id: 12,
-      text: "Se {player} pudesse beber só uma coisa para sempre, o que seria?",
-      options: ["Café ou Chá", "Refrigerante", "Cerveja, Vinho ou Drinks", "Só água"]
-    },
-    {
-      id: 13,
-      text: "Quem tem mais chance de se atrasar?",
-      options: ["Eu", "Você", "A gente sempre se atrasa junto", "Nós sempre somos pontuais"]
-    },
-    {
-      id: 14,
-      text: "Qual é o gênero de filme favorito de {player}?",
-      options: ["Ação e Ficção Científica", "Comédia", "Terror e Suspense", "Romance e Drama"]
-    },
-    {
-      id: 15,
-      text: "Quem dorme primeiro vendo filme?",
-      options: ["Eu", "Você", "É 50% de chance pra cada um", "Nós dois ficamos acordados"]
-    },
-    {
-      id: 16,
-      text: "Qual animal representa {player} melhor?",
-      options: ["Um gato preguiçoso", "Um cachorro leal e agitado", "Um macaco doido", "Uma coruja sábia e quieta"]
-    },
-    {
-      id: 17,
-      text: "Qual é o pior hábito de {player}?",
-      options: ["Deixar as coisas jogadas pela casa", "Ficar muito no celular", "Pensar demais nas coisas", "Interromper os outros"]
-    },
-    {
-      id: 18,
-      text: "Qual foi a primeira impressão que {player} teve de {partner}?",
-      options: ["Achei hilário(a)", "Achei muito atraente", "Achei um pouco estranho(a)/doido(a)", "Fiquei com um pouco de medo"]
-    },
-    {
-      id: 19,
-      text: "Quem disse \"Eu te amo\" primeiro?",
-      options: ["Eu", "Você", "Falamos praticamente juntos", "Sinceramente, não lembro"]
-    },
-    {
-      id: 20,
-      text: "O que mais irrita {player} nas pessoas?",
-      options: ["Pessoas lerdas andando ou dirigindo", "Mastigação barulhenta", "Pessoas atrasadas", "Bagunça ou falta de higiene"]
-    },
-    {
-      id: 21,
-      text: "Se ganhássemos na loteria, o que faríamos primeiro?",
-      options: ["Viajar pelo mundo", "Comprar uma mansão", "Investir com responsabilidade", "Comprar coisas idiotas e divertidas"]
-    },
-    {
-      id: 22,
-      text: "Quem é o palhaço da relação?",
-      options: ["Eu", "Você", "Nós temos nossas piadas internas", "Nenhum, somos muito sérios"]
-    },
-    {
-      id: 23,
-      text: "O que {player} mais ama em {partner}?",
-      options: ["Sua aparência física", "Seu senso de humor", "Sua bondade e coração", "Sua inteligência/mente"]
-    },
-    {
-      id: 24,
-      text: "Qual é a viagem dos sonhos de {player}?",
-      options: ["Um resort relaxante na praia", "Uma cidade grande e movimentada", "Uma cabana nas montanhas", "Fazer mochilão e aventura"]
-    },
-    {
-      id: 25,
-      text: "Quem demora mais no banho?",
-      options: ["Eu", "Você", "O mesmo tempo", "Quem for lavar o cabelo no dia"]
-    },
-    {
-      id: 26,
-      text: "Qual é o fast food de lei de {player}?",
-      options: ["McDonald's ou Burger King", "Pizza", "Tacos ou comida mexicana", "Frango frito"]
-    },
-    {
-      id: 27,
-      text: "Quem é mais dramático?",
-      options: ["Eu", "Você", "Nós dois fazemos drama", "Nós somos 100% de boa"]
-    },
-    {
-      id: 28,
-      text: "Qual é a nossa melhor memória juntos?",
-      options: ["Nosso primeiro encontro", "Nossa primeira viagem juntos", "Um momento engraçado e aleatório", "Uma comemoração ou aniversário"]
-    },
-    {
-      id: 29,
-      text: "Quem mexe mais no celular?",
-      options: ["Eu", "Você", "Nós dois somos viciados", "A gente quase não encosta no celular juntos"]
-    },
-    {
-      id: 30,
-      text: "Se {player} tivesse um superpoder, qual seria?",
-      options: ["Voar", "Ficar invisível", "Ler mentes", "Teletransporte"]
-    },
-    {
-      id: 31,
-      text: "Quem dirige melhor?",
-      options: ["Eu", "Você", "Nós dois dirigimos feito loucos", "Nós dois dirigimos igual velhinhos"]
-    },
-    {
-      id: 32,
-      text: "Qual é a sobremesa favorita de {player}?",
-      options: ["Qualquer coisa com chocolate", "Sorvete", "Bolo ou torta", "Prefiro salgado do que doce"]
-    },
-    {
-      id: 33,
-      text: "Quem tem mais chance de começar a dançar no meio da rua?",
-      options: ["Eu", "Você", "Com certeza faríamos isso juntos", "Absolutamente nenhum de nós dois"]
-    },
-    {
-      id: 34,
-      text: "Qual é o tamanho do sapato de {player}?",
-      options: ["35 - 37", "38 - 40", "41 - 43", "44+ (Pé Grande)"]
-    },
-    {
-      id: 35,
-      text: "Quem é mais competitivo?",
-      options: ["Eu", "Você", "A gente briga jogando Banco Imobiliário", "A gente não liga pra ganhar"]
-    },
-    {
-      id: 36,
-      text: "Como {player} prefere mandar mensagem?",
-      options: ["Várias mensagens curtas", "Textão", "Áudios de voz", "Prefiro ligar logo"]
-    },
-    {
-      id: 37,
-      text: "Que tipo de música {player} mais escuta?",
-      options: ["Pop e Hits do momento", "Rock e Indie", "Hip Hop, Rap ou Funk", "Sertanejo ou Acústico"]
-    },
-    {
-      id: 38,
-      text: "Quem tem mais chance de sobreviver a um apocalipse zumbi?",
-      options: ["Eu", "Você", "Faríamos uma equipe incrível", "Morreríamos no primeiro dia"]
-    },
-    {
-      id: 39,
-      text: "Qual é o maior medo de {player}?",
-      options: ["Aranhas e insetos", "Altura", "Perder a família ou você", "Fracassar"]
-    },
-    {
-      id: 40,
-      text: "Quem planeja os rolês na relação?",
-      options: ["Eu", "Você", "Nós dividimos por igual", "A gente só vai na sorte, sem plano"]
-    },
-    {
-      id: 41,
-      text: "Qual é a estação do ano favorita de {player}?",
-      options: ["Verão", "Inverno", "Primavera", "Outono"]
-    },
-    {
-      id: 42,
-      text: "Quem é mais sociável numa festa?",
-      options: ["Eu", "Você", "Nós dois falamos com todo mundo", "A gente só conversa um com o outro no canto"]
-    },
-    {
-      id: 43,
-      text: "Se a gente tivesse um dia livre, o que faríamos?",
-      options: ["Dormir e relaxar", "Fazer um passeio ao ar livre", "Fazer compras e comer fora", "Jogar ou ver filme em casa"]
-    },
-    {
-      id: 44,
-      text: "Quem tira mais fotos?",
-      options: ["Eu", "Você", "Tiramos a mesma quantidade", "A gente sempre esquece de tirar foto"]
-    },
-    {
-      id: 45,
-      text: "Qual é a parte favorita do corpo de {partner} na opinião de {player}?",
-      options: ["Olhos e Rosto", "Sorriso e Boca", "Bunda ou Peito", "Braços ou Costas"]
-    },
-    {
-      id: 46,
-      text: "Quem tem mais chance de trazer um bicho de rua pra casa?",
-      options: ["Eu", "Você", "A gente já fez isso", "A gente nunca faria isso"]
-    },
-    {
-      id: 47,
-      text: "Como é a rotina de manhã de {player}?",
-      options: ["Acorda cedo e cheio de energia", "Aperta o soneca 5 vezes", "Preciso de café antes de qualquer coisa", "Sempre na correria de atraso"]
-    },
-    {
-      id: 48,
-      text: "Quem dá os melhores presentes?",
-      options: ["Eu", "Você", "Nós dois mandamos muito bem", "Preferimos viver experiências"]
-    },
-    {
-      id: 49,
-      text: "Qual seria o título do nosso filme?",
-      options: ["Uma comédia romântica", "Uma aventura maluca", "Um drama com final feliz", "Uma série de comédia estilo Friends"]
-    },
-    {
-      id: 50,
-      text: "Quando {player} soube que {partner} era \"a pessoa certa\"?",
-      options: ["Logo que nos conhecemos", "Depois da nossa primeira viagem juntos", "Durante um momento aleatório do dia a dia", "Ainda estou avaliando (brincadeira!)"]
-    }
+    { id: 1, text: "Quem tem mais chance de se machucar?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 2, text: "Quem tem mais chance de pegar uma queimadura de sol?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 3, text: "Quem tem mais chance de se perder?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 4, text: "Quem tem mais chance de pedir informação na rua?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 5, text: "Quem tem mais chance de acordar de mau humor?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 6, text: "Quem tem mais chance de começar uma briga?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 7, text: "Quem tem mais chance de encerrar uma discussão?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 8, text: "Quem tem mais chance de estourar o limite do cartão de crédito?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 9, text: "Quem tem mais chance de economizar todo o dinheiro?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 10, text: "Quem tem mais chance de perder as chaves ou a carteira?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 11, text: "Quem tem mais chance de fazer do chão do quarto o seu cesto de roupa suja?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 12, text: "Quem tem mais chance de roubar alguém?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 13, text: "Quem tem mais chance de estragar as roupas ao lavar?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 14, text: "Quem tem mais chance de dar uma desculpa para escapar de algo que não quer fazer?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 15, text: "Quem tem mais chance de chorar vendo filme?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 16, text: "Quem tem mais chance de planejar uma viagem de última hora?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 17, text: "Quem tem mais chance de dizer \"Eu te amo\" primeiro no meio de uma briga?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 18, text: "Quem tem mais chance de planejar uma surpresa em segredo?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 19, text: "Quem tem mais chance de puxar assunto com um desconhecido?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 20, text: "Quem tem mais chance de sair do assunto durante uma conversa séria?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 21, text: "Quem tem mais chance de ver um significado profundo em algo pequeno?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 22, text: "Quem tem mais chance de lembrar dos mínimos detalhes?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 23, text: "Quem tem mais chance de desenterrar uma discussão antiga?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 24, text: "Quem tem mais chance de escrever sobre o relacionamento em um diário secreto?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 25, text: "Quem tem mais chance de tentar curar os próprios traumas sozinho?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 26, text: "Quem tem mais chance de rir em um momento totalmente errado?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 27, text: "Quem tem mais chance de falar algo inapropriado na frente dos pais do outro?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 28, text: "Quem tem mais chance de esquecer o que estava falando no meio da frase?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 29, text: "Quem tem mais chance de rir até chorar da própria piada?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 30, text: "Quem tem mais chance de comer sobremesa no café da manhã?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 31, text: "Quem tem mais chance de dormir no meio do filme (e negar depois)?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 32, text: "Quem tem mais chance de pedir seis acompanhamentos em vez de um prato principal?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 33, text: "Quem tem mais chance de esquecer onde estacionou o carro?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 34, text: "Quem tem mais chance de ficar excitado no meio de uma discussão?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 35, text: "Quem tem mais chance de querer se mudar para um lugar novo para recomeçar?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 36, text: "Quem tem mais chance de sugerir um detox digital?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 37, text: "Quem tem mais chance de comprar pijamas combinando para o casal?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 38, text: "Quem tem mais chance de maratonar uma série inteira sem esperar pelo parceiro?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 39, text: "Quem tem mais chance de contar a mesma história de novo e de novo?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 40, text: "Quem tem mais chance de ficar irritado de fome primeiro?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 41, text: "Quem tem mais chance de esquecer pelo que estavam brigando cinco minutos depois?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 42, text: "Quem tem mais chance de ficar estranhamente competitivo em jogos?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 43, text: "Quem tem mais chance de pedir \"só um pedacinho\" e comer metade da sua comida?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 44, text: "Quem tem mais chance de tentar consertar algo em casa sozinho e piorar a situação?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 45, text: "Quem tem mais chance de voluntariar vocês dois para algo sem perguntar antes?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 46, text: "Quem tem mais chance de aceitar ir no assento do meio no avião?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 47, text: "Quem tem mais chance de brigar pela temperatura do ar-condicionado?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 48, text: "Quem tem mais chance de querer uma comemoração de fim de ano enorme e cheia de gente?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 49, text: "Quem tem mais chance de ganhar uma briga fazendo o outro rir?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 50, text: "Quem tem mais chance de falar durante o filme inteiro?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 51, text: "Quem tem mais chance de virar melhor amigo do motorista de Uber?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 52, text: "Quem tem mais chance de ficar sem combustível porque \"achou que ia dar\"?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 53, text: "Quem tem mais chance de apertar o soneca cinco vezes seguidas?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 54, text: "Quem tem mais chance de manter a calma durante uma emergência?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 55, text: "Quem tem mais chance de entrar em um show ou evento sem ingresso?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 56, text: "Quem tem mais chance de fazer xixi no banho?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 57, text: "Quem tem mais chance de morrer primeiro em um filme de terror?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 58, text: "Quem tem mais chance de trazer provas (\"prints\") no meio de uma discussão?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 59, text: "Quem tem mais chance de ficar uma semana sem tomar banho?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 60, text: "Quem tem mais chance de pedir para devolver a comida no restaurante?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 61, text: "Quem tem mais chance de sobreviver a uma abdução alienígena?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 62, text: "Quem tem mais chance de esquecer o desodorante?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 63, text: "Quem tem mais chance de se assustar com um objeto inanimado?", options: ["Eu", "Você", "Nós dois", "Nenhum"] },
+    { id: 64, text: "Quem tem mais chance de ter 30 abas abertas no navegador o tempo todo?", options: ["Eu", "Você", "Nós dois", "Nenhum"] }
   ],
-
   en: [
-    {
-      id: 1,
-      text: "Who is the better cook?",
-      options: ["Me", "You", "We’re both pros", "We just survive on takeout"]
-    },
-    {
-      id: 2,
-      text: "Who spends more money on random stuff?",
-      options: ["Me", "You", "Equally guilty", "Neither, we save"]
-    },
-    {
-      id: 3,
-      text: "Who apologizes first after a fight?",
-      options: ["Me", "You", "Whoever is wrong", "We just pretend it never happened"]
-    },
-    {
-      id: 4,
-      text: "Who is more stubborn?",
-      options: ["Me", "You", "It's a dead tie", "Depends entirely on the topic"]
-    },
-    {
-      id: 5,
-      text: "What's {player}'s favorite type of food?",
-      options: ["Pizza & Burgers", "Sushi & Asian", "Traditional home-cooked", "Fancy stuff"]
-    },
-    {
-      id: 6,
-      text: "What's {player}'s ideal weekend?",
-      options: ["Staying in bed watching movies", "Going out and partying", "Exploring somewhere new", "Hanging out with friends/family"]
-    },
-    {
-      id: 7,
-      text: "Who is the messy one?",
-      options: ["Me", "You", "We're both a mess", "We're both clean freaks"]
-    },
-    {
-      id: 8,
-      text: "Which sentence describes us best?",
-      options: ["Opposites attract", "Two peas in a pod", "Always laughing together", "Partners in crime"]
-    },
-    {
-      id: 9,
-      text: "What is {player}'s favorite color to wear?",
-      options: ["Black & Neutrals", "Bright, loud colors", "Blue & Cool tones", "Earth tones"]
-    },
-    {
-      id: 10,
-      text: "How does {player} act when they are hungry?",
-      options: ["Angry (Hangry!)", "Super quiet", "Whiny and dramatic", "Normal, they just eat"]
-    },
-    {
-      id: 11,
-      text: "Who is more romantic?",
-      options: ["Me", "You", "Both of us", "Neither of us is cheesy"]
-    },
-    {
-      id: 12,
-      text: "If {player} could drink one thing forever, what is it?",
-      options: ["Coffee or Tea", "Soda", "Beer, Wine or Cocktails", "Just water"]
-    },
-    {
-      id: 13,
-      text: "Who is more likely to be late?",
-      options: ["Me", "You", "We're always late together", "We are always on time"]
-    },
-    {
-      id: 14,
-      text: "What's {player}'s favorite movie genre?",
-      options: ["Action & Sci-Fi", "Comedy", "Horror & Thriller", "Romance & Drama"]
-    },
-    {
-      id: 15,
-      text: "Who falls asleep first while watching a movie?",
-      options: ["Me", "You", "It’s a 50/50 chance", "We both stay awake"]
-    },
-    {
-      id: 16,
-      text: "What animal represents {player} best?",
-      options: ["A lazy cat", "A loyal, energetic dog", "A wild monkey", "A wise, quiet owl"]
-    },
-    {
-      id: 17,
-      text: "What's {player}'s worst habit?",
-      options: ["Leaving things around", "Being on their phone too much", "Overthinking everything", "Interrupting people"]
-    },
-    {
-      id: 18,
-      text: "What was {player}'s first impression of {partner}?",
-      options: ["You were hilarious", "You were super attractive", "You were a bit weird/crazy", "You were intimidating"]
-    },
-    {
-      id: 19,
-      text: "Who said \"I love you\" first?",
-      options: ["Me", "You", "We basically said it together", "Honestly, I don't remember"]
-    },
-    {
-      id: 20,
-      text: "What is {player}'s biggest pet peeve?",
-      options: ["Slow walkers or bad drivers", "Loud chewing", "People being late", "Messiness or bad hygiene"]
-    },
-    {
-      id: 21,
-      text: "If we won the lottery, what would we do first?",
-      options: ["Travel the world", "Buy a huge house", "Invest it responsibly", "Buy stupid, fun stuff"]
-    },
-    {
-      id: 22,
-      text: "Who is the funny one in the relationship?",
-      options: ["Me", "You", "We have our own inside jokes", "Neither, we take ourselves too seriously"]
-    },
-    {
-      id: 23,
-      text: "What does {player} love most about {partner}?",
-      options: ["Your looks", "Your sense of humor", "Your kindness and heart", "Your brain/intelligence"]
-    },
-    {
-      id: 24,
-      text: "What is {player}'s dream vacation?",
-      options: ["A relaxing beach resort", "A big, busy city", "Cabins and mountains", "Backpacking and adventure"]
-    },
-    {
-      id: 25,
-      text: "Who takes the longest in the shower?",
-      options: ["Me", "You", "Exact same amount of time", "Whoever is washing their hair"]
-    },
-    {
-      id: 26,
-      text: "What is {player}'s go-to fast food?",
-      options: ["McDonald's or Burger King", "Pizza", "Tacos / Mexican food", "Fried Chicken"]
-    },
-    {
-      id: 27,
-      text: "Who is more dramatic?",
-      options: ["Me", "You", "Both of us make a scene", "We are super chill"]
-    },
-    {
-      id: 28,
-      text: "What’s our best shared memory?",
-      options: ["Our first date", "Our first trip together", "A random, hilarious moment", "A special anniversary/celebration"]
-    },
-    {
-      id: 29,
-      text: "Who uses their phone the most?",
-      options: ["Me", "You", "We are both addicted", "We barely touch them when we're together"]
-    },
-    {
-      id: 30,
-      text: "If {player} had a superpower, what would it be?",
-      options: ["Flying", "Invisibility", "Reading minds", "Teleportation"]
-    },
-    {
-      id: 31,
-      text: "Who is the better driver?",
-      options: ["Me", "You", "We both drive like crazy", "We both drive like grandpas/grandmas"]
-    },
-    {
-      id: 32,
-      text: "What is {player}'s favorite dessert?",
-      options: ["Chocolate anything", "Ice cream", "Cake or pie", "I prefer salty food over sweets"]
-    },
-    {
-      id: 33,
-      text: "Who is more likely to start dancing in public?",
-      options: ["Me", "You", "We’d definitely do it together", "Absolutely neither of us"]
-    },
-    {
-      id: 34,
-      text: "What’s {player}'s shoe size?",
-      options: ["35 - 37", "38 - 40", "41 - 43", "44+ (Bigfoot)"]
-    },
-    {
-      id: 35,
-      text: "Who is more competitive?",
-      options: ["Me", "You", "We fight over board games", "We don't care about winning"]
-    },
-    {
-      id: 36,
-      text: "How does {player} prefer to text?",
-      options: ["Short, quick texts", "Huge paragraphs", "Voice notes", "I'd rather just call"]
-    },
-    {
-      id: 37,
-      text: "What kind of music does {player} listen to the most?",
-      options: ["Pop & Top Hits", "Rock & Indie", "Hip Hop, Rap or Funk", "Country or Acoustic"]
-    },
-    {
-      id: 38,
-      text: "Who is more likely to survive a zombie apocalypse?",
-      options: ["Me", "You", "We’d make a badass team", "We’d die on day one"]
-    },
-    {
-      id: 39,
-      text: "What is {player}'s biggest fear?",
-      options: ["Spiders and bugs", "Heights", "Losing family or you", "Failure"]
-    },
-    {
-      id: 40,
-      text: "Who is the \"planner\" in the relationship?",
-      options: ["Me", "You", "We split it evenly", "We just wing it"]
-    },
-    {
-      id: 41,
-      text: "What’s {player}'s favorite season?",
-      options: ["Summer", "Winter", "Spring", "Fall (Autumn)"]
-    },
-    {
-      id: 42,
-      text: "Who is more sociable at a party?",
-      options: ["Me", "You", "We both talk to everyone", "We just talk to each other in the corner"]
-    },
-    {
-      id: 43,
-      text: "If we had a free day together, what would we do?",
-      options: ["Sleep and relax", "Go on an adventure outdoors", "Go shopping and eat out", "Play games or watch movies at home"]
-    },
-    {
-      id: 44,
-      text: "Who takes more photos?",
-      options: ["Me", "You", "We take equal amounts", "We always forget to take pictures"]
-    },
-    {
-      id: 45,
-      text: "What is {player}'s favorite physical feature of {partner}?",
-      options: ["Eyes and Face", "Smile and Lips", "Booty or Chest", "Arms or Back"]
-    },
-    {
-      id: 46,
-      text: "Who is more likely to bring home a stray animal?",
-      options: ["Me", "You", "We already did this", "We would never"]
-    },
-    {
-      id: 47,
-      text: "What is {player}'s morning routine like?",
-      options: ["Wake up early and energized", "Hit snooze 5 times", "Need coffee immediately", "Always rushing because I'm late"]
-    },
-    {
-      id: 48,
-      text: "Who gives better gifts?",
-      options: ["Me", "You", "We both nail it", "We prefer experiences over gifts"]
-    },
-    {
-      id: 49,
-      text: "What would be the title of our movie?",
-      options: ["A romantic comedy", "A crazy adventure", "A drama with a happy ending", "A sitcom"]
-    },
-    {
-      id: 50,
-      text: "When did {player} know that {partner} was \"the one\"?",
-      options: ["Right when we met", "After our first big trip/milestone", "During a random everyday moment", "I'm still figuring it out (joke!)"]
-    }
+    { id: 1, text: "Who is more likely to get injured?", options: ["Me", "You", "Both", "None"] },
+    { id: 2, text: "Who is more likely to get sunburn?", options: ["Me", "You", "Both", "None"] },
+    { id: 3, text: "Who is more likely to get lost?", options: ["Me", "You", "Both", "None"] },
+    { id: 4, text: "Who is more likely to ask for directions?", options: ["Me", "You", "Both", "None"] },
+    { id: 5, text: "Who is more likely to wake up grumpy?", options: ["Me", "You", "Both", "None"] },
+    { id: 6, text: "Who is more likely to start an argument?", options: ["Me", "You", "Both", "None"] },
+    { id: 7, text: "Who is more likely to finish an argument?", options: ["Me", "You", "Both", "None"] },
+    { id: 8, text: "Who is more likely to max out their credit card?", options: ["Me", "You", "Both", "None"] },
+    { id: 9, text: "Who is more likely to save all their money?", options: ["Me", "You", "Both", "None"] },
+    { id: 10, text: "Who is more likely to lose their keys or wallet?", options: ["Me", "You", "Both", "None"] },
+    { id: 11, text: "Who is more likely to make the bedroom floor their personal laundry basket?", options: ["Me", "You", "Both", "None"] },
+    { id: 12, text: "Who is more likely to rob someone?", options: ["Me", "You", "Both", "None"] },
+    { id: 13, text: "Who is more likely to destroy clothing doing the laundry?", options: ["Me", "You", "Both", "None"] },
+    { id: 14, text: "Who is more likely to get out of something they don't want to do?", options: ["Me", "You", "Both", "None"] },
+    { id: 15, text: "Who's most likely to cry during a movie?", options: ["Me", "You", "Both", "None"] },
+    { id: 16, text: "Who's most likely to book a last-minute trip?", options: ["Me", "You", "Both", "None"] },
+    { id: 17, text: "Who's most likely to say \"I love you\" first in an argument?", options: ["Me", "You", "Both", "None"] },
+    { id: 18, text: "Who's most likely to secretly plan a surprise?", options: ["Me", "You", "Both", "None"] },
+    { id: 19, text: "Who's most likely to strike up a convo with a stranger?", options: ["Me", "You", "Both", "None"] },
+    { id: 20, text: "Who's most likely to go off-script during a serious talk?", options: ["Me", "You", "Both", "None"] },
+    { id: 21, text: "Who's most likely to see the deeper meaning in something small?", options: ["Me", "You", "Both", "None"] },
+    { id: 22, text: "Who's most likely to remember the little things?", options: ["Me", "You", "Both", "None"] },
+    { id: 23, text: "Who's most likely to bring up an old disagreement?", options: ["Me", "You", "Both", "None"] },
+    { id: 24, text: "Who's most likely to secretly journal about the relationship?", options: ["Me", "You", "Both", "None"] },
+    { id: 25, text: "Who's most likely to try healing work on their own?", options: ["Me", "You", "Both", "None"] },
+    { id: 26, text: "Who's most likely to laugh at the wrong moment?", options: ["Me", "You", "Both", "None"] },
+    { id: 27, text: "Who's the most likely to say something inappropriate in front of the other's parents?", options: ["Me", "You", "Both", "None"] },
+    { id: 28, text: "Who's most likely to forget what they were saying mid-sentence?", options: ["Me", "You", "Both", "None"] },
+    { id: 29, text: "Who's most likely to cry-laugh at their own joke?", options: ["Me", "You", "Both", "None"] },
+    { id: 30, text: "Who's most likely to eat dessert for breakfast?", options: ["Me", "You", "Both", "None"] },
+    { id: 31, text: "Who's most likely to fall asleep mid-movie (and deny it)?", options: ["Me", "You", "Both", "None"] },
+    { id: 32, text: "Who's most likely to order six sides instead of a main dish?", options: ["Me", "You", "Both", "None"] },
+    { id: 33, text: "Who's most likely to forget where they parked their car?", options: ["Me", "You", "Both", "None"] },
+    { id: 34, text: "Who's most likely to get turned on mid-argument?", options: ["Me", "You", "Both", "None"] },
+    { id: 35, text: "Who's most likely to want to move to a new place for a fresh start?", options: ["Me", "You", "Both", "None"] },
+    { id: 36, text: "Who's most likely to want a digital detox?", options: ["Me", "You", "Both", "None"] },
+    { id: 37, text: "Who is most likely to buy matching pajama sets?", options: ["Me", "You", "Both", "None"] },
+    { id: 38, text: "Who is most likely to binge an entire series without waiting for their partner?", options: ["Me", "You", "Both", "None"] },
+    { id: 39, text: "Who is most likely to retell a story over and over?", options: ["Me", "You", "Both", "None"] },
+    { id: 40, text: "Who is most likely to get hangry first?", options: ["Me", "You", "Both", "None"] },
+    { id: 41, text: "Who is most likely to forget what they argued about five minutes later?", options: ["Me", "You", "Both", "None"] },
+    { id: 42, text: "Who is most likely to get weirdly competitive over games?", options: ["Me", "You", "Both", "None"] },
+    { id: 43, text: "Who is most likely to take “just a bite” and eat half your food?", options: ["Me", "You", "Both", "None"] },
+    { id: 44, text: "Who is most likely to try to DIY home repairs and make it worse?", options: ["Me", "You", "Both", "None"] },
+    { id: 45, text: "Who is most likely to volunteer the two of you for something without asking first?", options: ["Me", "You", "Both", "None"] },
+    { id: 46, text: "Who is most likely to take the middle seat on an airplane?", options: ["Me", "You", "Both", "None"] },
+    { id: 47, text: "Who is most likely to pick a fight over thermostat settings?", options: ["Me", "You", "Both", "None"] },
+    { id: 48, text: "Who is most likely to want a big, elaborate family holiday celebration?", options: ["Me", "You", "Both", "None"] },
+    { id: 49, text: "Who is most likely to win an argument by making the other laugh?", options: ["Me", "You", "Both", "None"] },
+    { id: 50, text: "Who is most likely to talk through an entire movie?", options: ["Me", "You", "Both", "None"] },
+    { id: 51, text: "Who is most likely to befriend your Uber driver?", options: ["Me", "You", "Both", "None"] },
+    { id: 52, text: "Who is most likely to run out of gas because they “thought it would last”?", options: ["Me", "You", "Both", "None"] },
+    { id: 53, text: "Who is most likely to snooze their alarm five times in a row?", options: ["Me", "You", "Both", "None"] },
+    { id: 54, text: "Who is most likely to stay calm during an emergency?", options: ["Me", "You", "Both", "None"] },
+    { id: 55, text: "Who is most likely to sneak into a concert or event without a ticket?", options: ["Me", "You", "Both", "None"] },
+    { id: 56, text: "Who is most likely to pee in the shower?", options: ["Me", "You", "Both", "None"] },
+    { id: 57, text: "Who is most likely to die first in a horror film?", options: ["Me", "You", "Both", "None"] },
+    { id: 58, text: "Who is most likely to expose receipts during an argument?", options: ["Me", "You", "Both", "None"] },
+    { id: 59, text: "Who is most likely to go a week without a shower?", options: ["Me", "You", "Both", "None"] },
+    { id: 60, text: "Who is most likely to send their food back at a restaurant?", options: ["Me", "You", "Both", "None"] },
+    { id: 61, text: "Who is most likely to survive an alien abduction?", options: ["Me", "You", "Both", "None"] },
+    { id: 62, text: "Who is most likely to forget deodorant?", options: ["Me", "You", "Both", "None"] },
+    { id: 63, text: "Who is most likely to get scared by an inanimate object?", options: ["Me", "You", "Both", "None"] },
+    { id: 64, text: "Who is most likely to have 30 tabs open at all times?", options: ["Me", "You", "Both", "None"] }
   ]
 };
