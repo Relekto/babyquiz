@@ -1,7 +1,7 @@
 // App de Afinidade de Casal - Dia dos Namorados
 
 // Global error logging for debugging
-window.onerror = function(message, source, lineno, colno, error) {
+window.onerror = function (message, source, lineno, colno, error) {
   alert("Runtime Error:\n" + message + "\nLine: " + lineno + "\nError: " + error);
   return false;
 };
@@ -81,8 +81,8 @@ class HeartCanvas {
     ctx.moveTo(x, y + size / 4);
     ctx.quadraticCurveTo(x, y, x + size / 2, y);
     ctx.quadraticCurveTo(x + size, y, x + size, y + size / 3);
-    ctx.quadraticCurveTo(x + size, y + size * 2/3, x + size / 2, y + size);
-    ctx.quadraticCurveTo(x, y + size * 2/3, x, y + size / 3);
+    ctx.quadraticCurveTo(x + size, y + size * 2 / 3, x + size / 2, y + size);
+    ctx.quadraticCurveTo(x, y + size * 2 / 3, x, y + size / 3);
     ctx.quadraticCurveTo(x, y, x, y + size / 4);
     ctx.closePath();
     ctx.fill();
@@ -124,7 +124,7 @@ class HeartCanvas {
     // Face circle
     ctx.arc(cx, cy, size * 0.45, 0, Math.PI * 2);
     ctx.fill();
-    
+
     // Left ear
     ctx.beginPath();
     ctx.moveTo(cx - size * 0.4, cy - size * 0.15);
@@ -151,11 +151,11 @@ class HeartCanvas {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.y += p.speedY;
-      
+
       // Movimento de ziguezague (sway)
       p.sway += p.swaySpeed;
       p.x += p.speedX + Math.sin(p.sway) * 0.4;
-      
+
       // Decaimento de opacidade gradual se subirem muito
       if (p.y < 100) {
         p.opacity -= 0.005;
@@ -195,7 +195,7 @@ class RomanticSynth {
     this.musicInterval = null;
     this.isMuted = false;
     this.melodyIndex = 0;
-    
+
     // Progressão harmônica romântica suave
     // Cmaj9 -> Am9 -> Fmaj7 -> G6
     this.chords = [
@@ -213,7 +213,7 @@ class RomanticSynth {
 
   playTone(freq, type, duration, volume, slideTo = null) {
     if (this.isMuted || !this.ctx) return;
-    
+
     // Garante que o contexto está ativo (politica de autoplay)
     if (this.ctx.state === 'suspended') {
       this.ctx.resume();
@@ -224,7 +224,7 @@ class RomanticSynth {
 
     osc.type = type;
     osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-    
+
     if (slideTo) {
       osc.frequency.exponentialRampToValueAtTime(slideTo, this.ctx.currentTime + duration);
     }
@@ -292,17 +292,17 @@ class RomanticSynth {
   startAmbientMusic() {
     this.init();
     if (this.musicInterval) return;
-    
+
     this.isPlayingMusic = true;
     let chordIndex = 0;
     let noteStep = 0;
 
     const playNextNote = () => {
       if (!this.isPlayingMusic || this.isMuted) return;
-      
+
       const currentChord = this.chords[chordIndex];
       const noteFreq = currentChord[noteStep % currentChord.length];
-      
+
       // Toca uma nota suave
       // Multiplica frequência por 2 ocasionalmente para variar a oitava
       const octave = (noteStep % 5 === 0) ? 2 : 1;
@@ -346,7 +346,7 @@ class AffinityApp {
     this.config = coupleConfig;
     this.canvas = new HeartCanvas();
     this.synth = new RomanticSynth();
-    
+
     // Idioma Ativo
     this.currentLang = localStorage.getItem('namorados_lang') || 'pt';
 
@@ -392,19 +392,19 @@ class AffinityApp {
   checkUrlParams() {
     const urlParams = new URLSearchParams(window.location.search);
     const roomFromUrl = urlParams.get('room');
-    
+
     if (roomFromUrl) {
       // Abre o painel multiplayer automaticamente na aba de entrar
       this.synth.playClickSound();
-      
+
       // Ajusta layout
       document.getElementById('play-mode-selection').classList.add('hidden');
       document.getElementById('multiplayer-panel').classList.remove('hidden');
       document.getElementById('mp-guest-block').classList.remove('hidden');
       document.getElementById('mp-lobby-actions').classList.add('hidden');
-      
+
       document.getElementById('join-room-code').value = roomFromUrl;
-      
+
       // Ajusta placeholders de nomes para multiplayer
       const langConfig = this.config[this.currentLang];
       document.getElementById('lbl-player1-name').textContent = langConfig.ui.lblP1NameOnline;
@@ -415,10 +415,10 @@ class AffinityApp {
     // Escolha: Jogar Online (Mostra painel MP)
     document.getElementById('btn-play-online').addEventListener('click', () => {
       this.synth.playClickSound();
-      
+
       const p1Input = document.getElementById('player1-name');
       this.p1Name = p1Input.value.trim();
-      
+
       if (!this.p1Name) {
         // Força preencher o primeiro nome
         p1Input.focus();
@@ -439,11 +439,11 @@ class AffinityApp {
       this.synth.playClickSound();
       this.isHost = true;
       this.isMultiplayer = true;
-      
+
       // Gera código aleatório
       const code = Math.floor(1000 + Math.random() * 9000).toString();
       this.roomCode = code;
-      
+
       document.getElementById('mp-lobby-actions').classList.add('hidden');
       document.getElementById('mp-host-block').classList.remove('hidden');
       document.getElementById('room-code-val').textContent = code;
@@ -463,12 +463,12 @@ class AffinityApp {
       this.synth.playClickSound();
       const codeInput = document.getElementById('join-room-code');
       const code = codeInput.value.trim();
-      
+
       if (!code) {
         codeInput.focus();
         return;
       }
-      
+
       this.isHost = false;
       this.isMultiplayer = true;
       this.roomCode = code;
@@ -480,7 +480,7 @@ class AffinityApp {
     // Copiar código / link da sala
     document.getElementById('btn-copy-code').addEventListener('click', () => {
       this.synth.playClickSound();
-      
+
       const copyToClipboard = (text) => {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           return navigator.clipboard.writeText(text);
@@ -519,11 +519,11 @@ class AffinityApp {
     document.getElementById('btn-mp-cancel').addEventListener('click', () => {
       this.synth.playClickSound();
       this.disconnectPeer();
-      
+
       const langConfig = this.config[this.currentLang];
       document.getElementById('lbl-player1-name').textContent = langConfig.ui.labelP1Name;
       document.getElementById('play-mode-selection').classList.remove('hidden');
-      
+
       // Oculta blocos multiplayer
       document.getElementById('multiplayer-panel').classList.add('hidden');
       document.getElementById('mp-host-block').classList.add('hidden');
@@ -574,7 +574,7 @@ class AffinityApp {
     // Avançar da Tela de Revelação
     document.getElementById('btn-next-question').addEventListener('click', () => {
       this.synth.playClickSound();
-      
+
       if (this.isMultiplayer) {
         if (this.isHost) {
           this.conn.send({ type: 'NEXT_QUESTION' });
@@ -650,9 +650,9 @@ class AffinityApp {
         document.getElementById('question-number').textContent = langConfig.ui.questionHeader
           .replace('{num}', this.currentQuestionIdx + 1)
           .replace('{total}', totalQ);
-        
-        const currentScorePercent = this.currentQuestionIdx > 0 
-          ? Math.round((this.matchesCount / this.currentQuestionIdx) * 100) 
+
+        const currentScorePercent = this.currentQuestionIdx > 0
+          ? Math.round((this.matchesCount / this.currentQuestionIdx) * 100)
           : 0;
         document.getElementById('affinity-score-preview').textContent = langConfig.ui.scoreHeader.replace('{score}', currentScorePercent);
 
@@ -734,7 +734,7 @@ class AffinityApp {
     // Conecta ao servidor sinalizador gratuito do PeerJS
     if (isHost) {
       this.peer = new Peer(`namorados-love-${code}`);
-      
+
       this.peer.on('open', () => {
         console.log("Sala criada com ID:", this.peer.id);
       });
@@ -758,7 +758,7 @@ class AffinityApp {
       });
     } else {
       this.peer = new Peer();
-      
+
       this.peer.on('open', () => {
         console.log("Guest conectado ao sinalizador, conectando à sala:", code);
         this.conn = this.peer.connect(`namorados-love-${code}`);
@@ -827,7 +827,7 @@ class AffinityApp {
 
   handleIncomingData(data) {
     const langConfig = this.config[this.currentLang];
-    
+
     switch (data.type) {
       case 'SYNC_NAME':
         if (this.isHost) {
@@ -840,14 +840,14 @@ class AffinityApp {
           // Guest sincroniza nomes: Host passa a ser P1, Guest passa a ser P2
           this.p2Name = this.p1Name; // Salva meu nome em P2
           this.p1Name = data.name;   // Salva nome do parceiro em P1
-          
+
           // Envia de volta o nome do Guest para o Host fechar a sincronização
           this.conn.send({
             type: 'SYNC_NAME',
             role: 'guest',
             name: this.p2Name
           });
-          
+
           // Mostra tela de aguardo para o guest
           document.getElementById('mp-guest-block').innerHTML = `
             <div class="mp-status-card">
@@ -867,7 +867,7 @@ class AffinityApp {
         this.activeQuestionsSubjects = data.questionSubjects || [];
         document.querySelectorAll('.p1-name-display').forEach(el => el.textContent = this.p1Name);
         document.querySelectorAll('.p2-name-display').forEach(el => el.textContent = this.p2Name);
-        
+
         this.synth.startAmbientMusic();
         this.startQuiz();
         break;
@@ -893,20 +893,20 @@ class AffinityApp {
 
       case 'CHAT_MSG':
         this.appendChatMessage(data.sender, data.text, false);
-        
+
         // Abre o chat automaticamente se estiver fechado
         const chatContainer = document.getElementById('mp-chat-container');
         if (chatContainer && chatContainer.classList.contains('collapsed')) {
           chatContainer.classList.remove('collapsed');
           this.unreadCount = 0;
           this.updateChatBadge();
-          
+
           setTimeout(() => {
             const msgs = document.getElementById('chat-messages');
             if (msgs) msgs.scrollTop = msgs.scrollHeight;
           }, 100);
         }
-        
+
         // Toca som de mensagem recebida
         this.synth.playChatReceivedSound();
         break;
@@ -959,7 +959,7 @@ class AffinityApp {
   // ==========================================
   updateLanguage() {
     const langConfig = this.config[this.currentLang];
-    
+
     // Atualiza a bandeira
     const btnLang = document.getElementById('btn-lang-toggle');
     btnLang.innerHTML = this.currentLang === 'pt' ? FLAG_BR : FLAG_US;
@@ -1072,30 +1072,30 @@ class AffinityApp {
     const activeQ = this.getActiveQuestions();
     const totalQ = activeQ.length;
     const progressPercent = ((this.currentQuestionIdx) / totalQ) * 100;
-    
+
     document.getElementById('progress-bar-fill').style.width = `${progressPercent || 5}%`;
     document.getElementById('question-number').textContent = langConfig.ui.questionHeader
       .replace('{num}', this.currentQuestionIdx + 1)
       .replace('{total}', totalQ);
-    
+
     // Atualiza pontuação parcial
-    const currentScorePercent = this.currentQuestionIdx > 0 
-      ? Math.round((this.matchesCount / this.currentQuestionIdx) * 100) 
+    const currentScorePercent = this.currentQuestionIdx > 0
+      ? Math.round((this.matchesCount / this.currentQuestionIdx) * 100)
       : 0;
     document.getElementById('affinity-score-preview').textContent = langConfig.ui.scoreHeader.replace('{score}', currentScorePercent);
 
     if (this.isMultiplayer) {
       this.showQuizStep('p1Turn');
-      
+
       // Ajusta o título do turno para online
       const badge = document.querySelector('#quiz-p1-turn .player-indicator');
       badge.textContent = this.currentLang === 'pt' ? "Sua Escolha 🌐" : "Your Choice 🌐";
       badge.className = "player-indicator p1-badge";
-      
-      document.getElementById('lbl-p1-tip').textContent = this.currentLang === 'pt' 
-        ? "Escolha o que você acha que descreve melhor vocês dois!" 
-        : "Choose what you think describes the two of you best!";
-        
+
+      document.getElementById('lbl-p1-tip').textContent = this.currentLang === 'pt'
+        ? "PENSA QUE NEM EUUUU PENSA QUE NEM EUUUUUU"
+        : "THINK LIKE MEEE THINK LIKE MEEEE";
+
       this.renderMultiplayerQuestion();
     } else {
       // Jogo Local Normal
@@ -1111,10 +1111,10 @@ class AffinityApp {
   renderP1Question() {
     const q = this.getActiveQuestions()[this.currentQuestionIdx];
     document.getElementById('p1-question-text').textContent = this.getQuestionText(q, this.currentQuestionIdx);
-    
+
     const container = document.getElementById('p1-options');
     container.innerHTML = "";
-    
+
     q.options.forEach((opt, idx) => {
       const btn = document.createElement('button');
       btn.className = "option-btn";
@@ -1133,10 +1133,10 @@ class AffinityApp {
   renderP2Question() {
     const q = this.getActiveQuestions()[this.currentQuestionIdx];
     document.getElementById('p2-question-text').textContent = this.getQuestionText(q, this.currentQuestionIdx);
-    
+
     const container = document.getElementById('p2-options');
     container.innerHTML = "";
-    
+
     q.options.forEach((opt, idx) => {
       const btn = document.createElement('button');
       btn.className = "option-btn";
@@ -1158,10 +1158,10 @@ class AffinityApp {
   renderMultiplayerQuestion() {
     const q = this.getActiveQuestions()[this.currentQuestionIdx];
     document.getElementById('p1-question-text').textContent = this.getQuestionText(q, this.currentQuestionIdx);
-    
+
     const container = document.getElementById('p1-options');
     container.innerHTML = "";
-    
+
     q.options.forEach((opt, idx) => {
       const btn = document.createElement('button');
       btn.className = "option-btn";
@@ -1201,7 +1201,7 @@ class AffinityApp {
     this.showQuizStep('reveal');
     const langConfig = this.config[this.currentLang];
     const q = this.getActiveQuestions()[this.currentQuestionIdx];
-    
+
     // Mapeia quem escolheu o quê
     let myChoiceText = q.options[this.myChosenIdx];
     let partnerChoiceText = q.options[this.partnerChosenIdx];
@@ -1236,10 +1236,10 @@ class AffinityApp {
       revealIcon.classList.add('bounce-animation');
       revealTitle.innerHTML = langConfig.ui.revealMatchTitle;
       revealDesc.textContent = langConfig.ui.revealMatchDesc;
-      
+
       this.synth.playMatchSound();
       const rect = revealIcon.getBoundingClientRect();
-      this.canvas.spawnBurst(rect.left + rect.width/2, rect.top + rect.height/2, 35);
+      this.canvas.spawnBurst(rect.left + rect.width / 2, rect.top + rect.height / 2, 35);
     } else {
       p1Box.classList.add('mismatch-reveal');
       p2Box.classList.add('mismatch-reveal');
@@ -1247,13 +1247,13 @@ class AffinityApp {
       revealIcon.classList.add('shake-animation');
       revealTitle.innerHTML = langConfig.ui.revealMismatchTitle;
       revealDesc.textContent = langConfig.ui.revealMismatchDesc;
-      
+
       this.synth.playMismatchSound();
     }
 
     // Configura botões de controle de tela
     const isLastQ = this.currentQuestionIdx === this.getActiveQuestions().length - 1;
-    
+
     if (this.isHost) {
       nextBtn.classList.remove('hidden');
       nextBtn.textContent = isLastQ ? langConfig.ui.btnFinish : langConfig.ui.btnNext;
@@ -1305,7 +1305,7 @@ class AffinityApp {
     p1Box.className = "reveal-choice-box p1-choice-box";
     p2Box.className = "reveal-choice-box p2-choice-box";
     revealIcon.className = "reveal-status-icon";
-    
+
     document.getElementById('reveal-p1-choice-text').textContent = p1ChoiceText;
     document.getElementById('reveal-p2-choice-text').textContent = p2ChoiceText;
 
@@ -1319,10 +1319,10 @@ class AffinityApp {
       revealIcon.classList.add('bounce-animation');
       revealTitle.innerHTML = langConfig.ui.revealMatchTitle;
       revealDesc.textContent = langConfig.ui.revealMatchDesc;
-      
+
       this.synth.playMatchSound();
       const rect = revealIcon.getBoundingClientRect();
-      this.canvas.spawnBurst(rect.left + rect.width/2, rect.top + rect.height/2, 35);
+      this.canvas.spawnBurst(rect.left + rect.width / 2, rect.top + rect.height / 2, 35);
     } else {
       p1Box.classList.add('mismatch-reveal');
       p2Box.classList.add('mismatch-reveal');
@@ -1330,7 +1330,7 @@ class AffinityApp {
       revealIcon.classList.add('shake-animation');
       revealTitle.innerHTML = langConfig.ui.revealMismatchTitle;
       revealDesc.textContent = langConfig.ui.revealMismatchDesc;
-      
+
       this.synth.playMismatchSound();
     }
 
@@ -1347,15 +1347,15 @@ class AffinityApp {
   goToResults() {
     this.switchScreen('results');
     this.synth.playFanfareSound();
-    
+
     const langConfig = this.config[this.currentLang];
     const totalQ = this.getActiveQuestions().length;
     const finalPercent = Math.round((this.matchesCount / totalQ) * 100);
-    
+
     // Anima a barra circular de progresso (Dashoffset total é 283)
     const strokeFill = document.getElementById('score-circle-fill');
     const offset = 283 - (283 * finalPercent) / 100;
-    
+
     // Animação de contagem numérica
     const scoreVal = document.getElementById('score-percentage');
     let currentCount = 0;
@@ -1365,7 +1365,7 @@ class AffinityApp {
     const animateCount = (timestamp) => {
       const elapsed = timestamp - startTime;
       const progress = Math.min(elapsed / countDuration, 1);
-      
+
       // Easing out quadratico
       const easeProgress = progress * (2 - progress);
       currentCount = Math.round(easeProgress * finalPercent);
@@ -1405,7 +1405,7 @@ class AffinityApp {
 
   getQuestionText(q, activeIndex) {
     if (!q) return "";
-    
+
     // Sujeito da pergunta (P1 ou P2)
     let subjectRole = 'p1';
     if (this.activeQuestionsSubjects && this.activeQuestionsSubjects[activeIndex]) {
@@ -1417,10 +1417,10 @@ class AffinityApp {
 
     const p1 = this.p1Name || (this.currentLang === 'pt' ? 'Amor 1' : 'Love 1');
     const p2 = this.p2Name || (this.currentLang === 'pt' ? 'Amor 2' : 'Love 2');
-    
+
     const player = (subjectRole === 'p1') ? p1 : p2;
     const partner = (subjectRole === 'p1') ? p2 : p1;
-    
+
     return q.text.replace(/{player}/g, player).replace(/{partner}/g, partner);
   }
 
@@ -1429,11 +1429,11 @@ class AffinityApp {
     if (!input) return;
     const text = input.value.trim();
     if (!text) return;
-    
+
     input.value = "";
     const myName = this.isHost ? this.p1Name : this.p2Name;
     const sender = myName || (this.currentLang === 'pt' ? 'Amor' : 'Love');
-    
+
     // Envia por P2P
     if (this.conn && this.conn.open) {
       this.conn.send({
@@ -1442,10 +1442,10 @@ class AffinityApp {
         sender: sender
       });
     }
-    
+
     // Toca som de envio
     this.synth.playChatSentSound();
-    
+
     // Adiciona na interface
     this.appendChatMessage(sender, text, true);
   }
@@ -1453,22 +1453,22 @@ class AffinityApp {
   appendChatMessage(senderName, text, isSent) {
     const container = document.getElementById('chat-messages');
     if (!container) return;
-    
+
     const msgDiv = document.createElement('div');
     msgDiv.className = `chat-msg ${isSent ? 'sent' : 'received'}`;
-    
+
     const senderSpan = document.createElement('span');
     senderSpan.className = 'chat-msg-sender';
     senderSpan.textContent = senderName;
-    
+
     const textSpan = document.createElement('span');
     textSpan.className = 'chat-msg-text';
     textSpan.textContent = text;
-    
+
     msgDiv.appendChild(senderSpan);
     msgDiv.appendChild(textSpan);
     container.appendChild(msgDiv);
-    
+
     // Scroll para baixo
     container.scrollTop = container.scrollHeight;
   }
@@ -1476,7 +1476,7 @@ class AffinityApp {
   updateChatBadge() {
     const badge = document.getElementById('chat-badge');
     if (!badge) return;
-    
+
     if (this.unreadCount > 0) {
       badge.textContent = this.unreadCount;
       badge.classList.remove('hidden');
@@ -1494,7 +1494,7 @@ class AffinityApp {
     this.myChosenIdx = null;
     this.partnerChosenIdx = null;
     document.getElementById('player1-name').value = "";
-    
+
     // Libera botão do guest
     const nextBtn = document.getElementById('btn-next-question');
     nextBtn.disabled = false;

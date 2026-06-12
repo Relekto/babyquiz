@@ -1,20 +1,20 @@
 // Configuração do Teste de Afinidade - Dia dos Namorados (Bilingue - UI e Títulos 💖)
 const coupleConfig = {
   pt: {
-    defaultPlayer1Name: "Amor 1",
-    defaultPlayer2Name: "Amor 2",
-    
+    defaultPlayer1Name: "Bebê 1",
+    defaultPlayer2Name: "Bebê 2",
+
     // Rótulos da Interface (UI)
     ui: {
-      welcomeTitle: "Teste de Afinidade de Casal 💖",
+      welcomeTitle: "Um teste com meu bebê lindoo ",
       welcomeSubtitle: "Dia dos Namorados",
-      welcomeIntro: "Descubram o quanto vocês estão em sintonia com um teste de afinidade super divertido e romântico para jogar juntinhos!",
-      labelP1Name: "Seu Nome (Amor) 💖",
+      welcomeIntro: "Vamos ver o quanto a gente pensa igual :) 💖",
+      labelP1Name: "Seu Nome (Meu Amor) 💖",
       labelP2Name: "Nome do Parceiro 💖",
       placeholderP1: "Digite seu nome...",
       placeholderP2: "Digite o nome...",
       btnStart: "Começar o Teste 💖",
-      
+
       // Multiplayer UI
       btnPlayLocal: "Jogar Local 📱",
       btnPlayOnline: "Jogar 🚀",
@@ -36,27 +36,27 @@ const coupleConfig = {
       lblMpConnectingStatus: "Conectando... 🟡",
       lblMpWaitingChoice: "Aguardando a escolha do seu amor... ⏳",
       lblP1NameOnline: "Seu Nome 💖",
-      
+
       questionHeader: "Questão {num} de {total}",
-      scoreHeader: "Sintonia: {score}%",
-      p1Tip: "Esconda a tela e faça sua escolha sem espiar! 🤫",
+      scoreHeader: "Em Sintonia: {score}%",
+      p1Tip: "Esconda a tela e faça sua escolha! Sem espiar! 🤫",
       p2Tip: "Sua vez! O que descreve melhor vocês dois?",
       choiceSaved: "Escolha Salva!",
-      transitionMsg: "Agora, passe o aparelho para <strong>{name}</strong> fazer a sua escolha.",
+      transitionMsg: "Agora, passe o aparelho para <strong>{name}</strong> fazer a escolha dele(a).",
       btnTransition: "Estou Pronto! 🚀",
-      
+
       revealProcessing: "Processando...",
-      revealSyncing: "Sincronizando as escolhas do casal...",
-      revealMatchTitle: "Deu Match! 😍",
-      revealMatchDesc: "Vocês pensam iguaizinhos! Sintonia maravilhosa.",
-      revealMismatchTitle: "Quase lá... 💔",
-      revealMismatchDesc: "Escolhas diferentes, mas tudo bem! O amor continua o mesmo.",
+      revealSyncing: "Sincronizando as escolhas do amor...",
+      revealMatchTitle: "Deu Match EU TÔ MUITO ORGULHOSOOOO! 😍",
+      revealMatchDesc: "SIIIIIIIIIIIIIIIM",
+      revealMismatchTitle: "Foda-se isso...💔",
+      revealMismatchDesc: "Você me odeia...",
       btnNext: "Próxima Questão ➡️",
-      btnFinish: "Ver Resultado Final 🏆",
-      
-      resultsTitle: "Sintonia do Casal",
-      resultsSubtitle: "Parabéns ao Casal!",
-      resultsSyncLabel: "Sintonia",
+      btnFinish: "Ver Resultados Finais 🏆",
+
+      resultsTitle: "Resultados do teste de afinidadeee ",
+      resultsSubtitle: "PARABÉNSSSSSSS",
+      resultsSyncLabel: "Em Sintonia",
       btnRestart: "Refazer Teste 🔄"
     },
 
@@ -65,67 +65,67 @@ const coupleConfig = {
       {
         min: 0,
         max: 30,
-        title: "Par em Aprendizado 🌱💖",
-        description: "Vocês ainda estão se descobrindo em alguns detalhes do dia a dia. O que é ótimo, pois significa que vocês têm muitas conversas interessantes e novos momentos para compartilhar pela frente! Que tal conversarem sobre as respostas agora?"
+        title: "WTF ?? ? ?",
+        description: "Foi o lag ? Ou você me odeia ou algo assim ? O que é isso ? ?? ?? ? ? ? ?"
       },
       {
         min: 40,
         max: 60,
-        title: "Sintonia em Crescimento 💫❤️",
-        description: "Vocês têm uma sintonia muito bonita! Conhecem bem os gostos um do outro e compartilham momentos especiais. Com um pouquinho mais de tempo juntos e conversas sinceras, logo estarão 100% integrados!"
+        title: "Conexão Linda 💫❤️",
+        description: "AH acho que o duman mexeu no meu mouse e clicou na errada desculpaaaaaa."
       },
       {
         min: 70,
         max: 90,
         title: "Conexão de Alma 💖✨",
-        description: "A conexão de vocês é incrível! Pensam super parecido em quase tudo e a cumplicidade é nítida. Vocês se completam de uma forma muito doce e especial, demonstrando um amor maduro e forte."
+        description: "A gente leu alguma pergunta errado ? Deve ser isso né ? "
       },
       {
         min: 100,
         max: 100,
         title: "Almas Gêmeas Perfeitas! 👑❤️",
-        description: "Inacreditável! Sintonia absoluta. Vocês pensam exatamente igual, compartilham o mesmo jeitinho de ver a vida e a conexão de vocês é mágica. Nascidos um para o outro em todos os sentidos. Feliz Dia dos Namorados! ❤️"
+        description: "SIIIM BEBÊ NÓS SOMOS PERFEITOSSSSSSS UM PARA O OUTROOOO EU TÔ TÃO FELIZZZZ"
       }
     ]
   },
 
   en: {
-    defaultPlayer1Name: "Love 1",
-    defaultPlayer2Name: "Love 2",
-    
+    defaultPlayer1Name: "Baby 1",
+    defaultPlayer2Name: "Baby 2",
+
     // UI Labels in English
     ui: {
-      welcomeTitle: "Couples Affinity Test 💖",
-      welcomeSubtitle: "Valentine's Day",
-      welcomeIntro: "Discover how in sync you and your partner are with a fun and romantic affinity test to play together!",
-      labelP1Name: "Your Name (Love) 💖",
+      welcomeTitle: "A test with my cute babbyy ",
+      welcomeSubtitle: "Brazilian Valentine's Day",
+      welcomeIntro: "Lets see how much we think the same way :) 💖",
+      labelP1Name: "Your Name (My Love) 💖",
       labelP2Name: "Partner's Name 💖",
       placeholderP1: "Enter your name...",
       placeholderP2: "Enter name...",
       btnStart: "Start the Test 💖",
-      
+
       // Multiplayer UI
       btnPlayLocal: "Play Local 📱",
       btnPlayOnline: "Play 🚀",
       btnCreateRoom: "Create Room 🏠",
       btnShowJoin: "Join Room 🔑",
       lblMpRoomCodeTitle: "Room Code:",
-      lblMpWaitingPartner: "Waiting for your partner to join... ⏳",
+      lblMpWaitingPartner: "Waiting for your love to join... ⏳",
       lblMpWaitingHost: "Waiting for the host to start the test... 🚀",
       lblMpWaitingNext: "Waiting for the host to proceed... ⏳",
       lblMpConnected: "Love Connected! ❤️",
       btnHostStart: "Start Test 🚀",
       lblMpJoinCodeLabel: "Room Code",
       placeholderJoinCode: "Enter code (e.g. 4512)",
-      btnGuestJoin: "Connect to Partner 🔗",
-      lblMpGuestConnecting: "Connecting to your partner... ⏳",
+      btnGuestJoin: "Connect to Love 🔗",
+      lblMpGuestConnecting: "Connecting to your love... ⏳",
       btnMpCancel: "⬅️ Cancel",
       lblMpConnectedStatus: "Online 🟢",
       lblMpDisconnectedStatus: "Offline 🔴",
       lblMpConnectingStatus: "Connecting... 🟡",
-      lblMpWaitingChoice: "Waiting for your partner's choice... ⏳",
+      lblMpWaitingChoice: "Waiting for your love's choice... ⏳",
       lblP1NameOnline: "Your Name 💖",
-      
+
       questionHeader: "Question {num} of {total}",
       scoreHeader: "In Sync: {score}%",
       p1Tip: "Hide the screen and make your choice! No peeking! 🤫",
@@ -133,18 +133,18 @@ const coupleConfig = {
       choiceSaved: "Choice Saved!",
       transitionMsg: "Now, pass the device to <strong>{name}</strong> to make their choice.",
       btnTransition: "I'm Ready! 🚀",
-      
+
       revealProcessing: "Processing...",
-      revealSyncing: "Syncing the couple's choices...",
-      revealMatchTitle: "It's a Match! 😍",
-      revealMatchDesc: "You think exactly alike! Wonderful connection.",
-      revealMismatchTitle: "Almost there... 💔",
-      revealMismatchDesc: "Different choices, but that's okay! The love is still the same.",
+      revealSyncing: "Syncing the love's choices...",
+      revealMatchTitle: "It's a Match I AM SO PROUDDDD! 😍",
+      revealMatchDesc: "YESSSSSSSSSSSSSS",
+      revealMismatchTitle: "Fck this...💔",
+      revealMismatchDesc: "You h me...",
       btnNext: "Next Question ➡️",
       btnFinish: "See Final Results 🏆",
-      
-      resultsTitle: "Couples Affinity",
-      resultsSubtitle: "Congratulations to the Couple!",
+
+      resultsTitle: "Affinity test resultsss ",
+      resultsSubtitle: "CONGRATZZZZZZZ",
       resultsSyncLabel: "In Sync",
       btnRestart: "Retake Test 🔄"
     },
@@ -154,26 +154,26 @@ const coupleConfig = {
       {
         min: 0,
         max: 30,
-        title: "Growing Together 🌱💖",
-        description: "You're still discovering the little quirks of each other, which is wonderful because it means you have lots of interesting chats and new memories ahead! How about talking about your answers now?"
+        title: "WTF ?? ? ?",
+        description: "Is it the lag ? Or do you h me or smt ? Whats this ? ?? ?? ? ? ? ?"
       },
       {
         min: 40,
         max: 60,
         title: "Beautiful Connection 💫❤️",
-        description: "You have a great connection! You know each other's habits well and share lovely moments. With just a little more quality time and sharing, you'll hit 100% in no time!"
+        description: "OH I think duman moved my mouse and clicked the wrong one sorrryyyyy."
       },
       {
         min: 70,
         max: 90,
         title: "Soul Connection 💖✨",
-        description: "Your bond is amazing! You think alike on almost everything and your chemistry is clear. You complete each other in a sweet and special way, showing a strong and mature love."
+        description: "Did we miss read a question ? That must be it right ? "
       },
       {
         min: 100,
         max: 100,
         title: "Perfect Soulmates! 👑❤️",
-        description: "Unbelievable! Total harmony. You think exactly the same, share the same vibe, and your connection is magical. Truly made for each other in every way. Happy Valentine's Day! ❤️"
+        description: "YESSS BABBBY WE ARE PERFECTTTTTTTT FOR EACH OTHERRRR I AM SO HAPPPYY"
       }
     ]
   }
