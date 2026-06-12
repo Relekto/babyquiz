@@ -1226,7 +1226,26 @@ class AffinityApp {
       document.getElementById('reveal-p2-choice-text').textContent = myChoiceText;
     }
 
-    const isMatch = this.myChosenIdx === this.partnerChosenIdx;
+    const p1ChoiceIdx = this.isHost ? this.myChosenIdx : this.partnerChosenIdx;
+    const p2ChoiceIdx = this.isHost ? this.partnerChosenIdx : this.myChosenIdx;
+
+    let isMatch = false;
+    const isRelative = (q.options[0] === "Eu" || q.options[0] === "Me") && 
+                       (q.options[1] === "Você" || q.options[1] === "You");
+
+    if (isRelative) {
+      if (p1ChoiceIdx === 0 && p2ChoiceIdx === 1) {
+        isMatch = true;
+      } else if (p1ChoiceIdx === 1 && p2ChoiceIdx === 0) {
+        isMatch = true;
+      } else if (p1ChoiceIdx === 2 && p2ChoiceIdx === 2) {
+        isMatch = true;
+      } else if (p1ChoiceIdx === 3 && p2ChoiceIdx === 3) {
+        isMatch = true;
+      }
+    } else {
+      isMatch = p1ChoiceIdx === p2ChoiceIdx;
+    }
 
     if (isMatch) {
       this.matchesCount++;
@@ -1309,7 +1328,23 @@ class AffinityApp {
     document.getElementById('reveal-p1-choice-text').textContent = p1ChoiceText;
     document.getElementById('reveal-p2-choice-text').textContent = p2ChoiceText;
 
-    const isMatch = p1ChoiceIdx === p2ChoiceIdx;
+    let isMatch = false;
+    const isRelative = (q.options[0] === "Eu" || q.options[0] === "Me") && 
+                       (q.options[1] === "Você" || q.options[1] === "You");
+
+    if (isRelative) {
+      if (p1ChoiceIdx === 0 && p2ChoiceIdx === 1) {
+        isMatch = true;
+      } else if (p1ChoiceIdx === 1 && p2ChoiceIdx === 0) {
+        isMatch = true;
+      } else if (p1ChoiceIdx === 2 && p2ChoiceIdx === 2) {
+        isMatch = true;
+      } else if (p1ChoiceIdx === 3 && p2ChoiceIdx === 3) {
+        isMatch = true;
+      }
+    } else {
+      isMatch = p1ChoiceIdx === p2ChoiceIdx;
+    }
 
     if (isMatch) {
       this.matchesCount++;
