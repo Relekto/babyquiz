@@ -1,0 +1,1525 @@
+// App de Afinidade de Casal - Dia dos Namorados
+
+// Global error logging for debugging
+window.onerror = function(message, source, lineno, colno, error) {
+  alert("Runtime Error:\n" + message + "\nLine: " + lineno + "\nError: " + error);
+  return false;
+};
+
+// Bandeiras em SVG para compatibilidade (ex: Windows)
+const FLAG_BR = `<svg viewBox="0 0 720 504" class="flag-icon" width="24" height="24" style="border-radius: 4px; vertical-align: middle;"><rect width="720" height="504" fill="#009c3b"/><polygon points="360,60 636,252 360,444 84,252" fill="#ffdf00"/><circle cx="360" cy="252" r="114" fill="#002776"/><path d="M251.6,268.4 C270,250 330,230 468.4,244 C468.4,244 410,215 300,235 C270,242.5 251.6,268.4 251.6,268.4 Z" fill="#ffffff"/></svg>`;
+const FLAG_US = `<svg viewBox="0 0 741 390" class="flag-icon" width="24" height="24" style="border-radius: 4px; vertical-align: middle;"><rect width="741" height="390" fill="#b22234"/><rect y="30" width="741" height="30" fill="#ffffff"/><rect y="90" width="741" height="30" fill="#ffffff"/><rect y="150" width="741" height="30" fill="#ffffff"/><rect y="210" width="741" height="30" fill="#ffffff"/><rect y="270" width="741" height="30" fill="#ffffff"/><rect y="330" width="741" height="30" fill="#ffffff"/><rect width="296.4" height="210" fill="#3c3b6e"/><circle cx="30" cy="25" r="4" fill="#ffffff"/><circle cx="70" cy="25" r="4" fill="#ffffff"/><circle cx="110" cy="25" r="4" fill="#ffffff"/><circle cx="150" cy="25" r="4" fill="#ffffff"/><circle cx="190" cy="25" r="4" fill="#ffffff"/><circle cx="230" cy="25" r="4" fill="#ffffff"/><circle cx="270" cy="25" r="4" fill="#ffffff"/><circle cx="50" cy="55" r="4" fill="#ffffff"/><circle cx="90" cy="55" r="4" fill="#ffffff"/><circle cx="130" cy="55" r="4" fill="#ffffff"/><circle cx="170" cy="55" r="4" fill="#ffffff"/><circle cx="210" cy="55" r="4" fill="#ffffff"/><circle cx="250" cy="55" r="4" fill="#ffffff"/><circle cx="30" cy="85" r="4" fill="#ffffff"/><circle cx="70" cy="85" r="4" fill="#ffffff"/><circle cx="110" cy="85" r="4" fill="#ffffff"/><circle cx="150" cy="85" r="4" fill="#ffffff"/><circle cx="190" cy="85" r="4" fill="#ffffff"/><circle cx="230" cy="85" r="4" fill="#ffffff"/><circle cx="270" cy="85" r="4" fill="#ffffff"/><circle cx="50" cy="115" r="4" fill="#ffffff"/><circle cx="90" cy="115" r="4" fill="#ffffff"/><circle cx="130" cy="115" r="4" fill="#ffffff"/><circle cx="170" cy="115" r="4" fill="#ffffff"/><circle cx="210" cy="115" r="4" fill="#ffffff"/><circle cx="250" cy="115" r="4" fill="#ffffff"/><circle cx="30" cy="145" r="4" fill="#ffffff"/><circle cx="70" cy="145" r="4" fill="#ffffff"/><circle cx="110" cy="145" r="4" fill="#ffffff"/><circle cx="150" cy="145" r="4" fill="#ffffff"/><circle cx="190" cy="145" r="4" fill="#ffffff"/><circle cx="230" cy="145" r="4" fill="#ffffff"/><circle cx="270" cy="145" r="4" fill="#ffffff"/><circle cx="50" cy="185" r="4" fill="#ffffff"/><circle cx="90" cy="185" r="4" fill="#ffffff"/><circle cx="130" cy="185" r="4" fill="#ffffff"/><circle cx="170" cy="185" r="4" fill="#ffffff"/><circle cx="210" cy="185" r="4" fill="#ffffff"/><circle cx="250" cy="185" r="4" fill="#ffffff"/></svg>`;
+
+// ==========================================
+// 1. SISTEMA DE PARTÍCULAS (CANVAS DE CORAÇÕES)
+// ==========================================
+class HeartCanvas {
+  constructor() {
+    this.canvas = document.getElementById('heart-canvas');
+    this.ctx = this.canvas.getContext('2d');
+    this.particles = [];
+    this.resize();
+    window.addEventListener('resize', () => this.resize());
+    this.loop();
+  }
+
+  resize() {
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+  }
+
+  spawnHeart(x, y, size = null) {
+    const rand = Math.random();
+    let type = 'heart';
+    if (rand < 0.35) {
+      type = 'paw';
+    } else if (rand < 0.50) {
+      type = 'cat';
+    }
+
+    this.particles.push({
+      x: x || Math.random() * this.canvas.width,
+      y: y || this.canvas.height + 20,
+      size: size || Math.random() * 15 + 8,
+      speedX: (Math.random() - 0.5) * 1.5,
+      speedY: -(Math.random() * 2 + 1),
+      opacity: Math.random() * 0.5 + 0.3,
+      sway: Math.random() * 100,
+      swaySpeed: Math.random() * 0.02 + 0.01,
+      colorHue: Math.random() * 30 + 330, // Tons de rosa/vermelho
+      type: type
+    });
+  }
+
+  spawnBurst(x, y, count = 25) {
+    for (let i = 0; i < count; i++) {
+      const rand = Math.random();
+      let type = 'heart';
+      if (rand < 0.35) {
+        type = 'paw';
+      } else if (rand < 0.50) {
+        type = 'cat';
+      }
+
+      this.particles.push({
+        x: x,
+        y: y,
+        size: Math.random() * 18 + 10,
+        speedX: (Math.random() - 0.5) * 6,
+        speedY: (Math.random() - 0.5) * 6 - 2,
+        opacity: 1,
+        sway: Math.random() * 100,
+        swaySpeed: Math.random() * 0.05 + 0.02,
+        colorHue: Math.random() * 40 + 320,
+        type: type
+      });
+    }
+  }
+
+  drawHeartShape(ctx, x, y, size) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + size / 4);
+    ctx.quadraticCurveTo(x, y, x + size / 2, y);
+    ctx.quadraticCurveTo(x + size, y, x + size, y + size / 3);
+    ctx.quadraticCurveTo(x + size, y + size * 2/3, x + size / 2, y + size);
+    ctx.quadraticCurveTo(x, y + size * 2/3, x, y + size / 3);
+    ctx.quadraticCurveTo(x, y, x, y + size / 4);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  drawPawShape(ctx, cx, cy, size) {
+    ctx.beginPath();
+    // Central pad
+    const padWidth = size * 0.8;
+    const padHeight = size * 0.6;
+    ctx.ellipse(cx, cy + size * 0.1, padWidth / 2, padHeight / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 4 Toes
+    const toeRadius = size * 0.15;
+    // Toe 1 (left)
+    ctx.beginPath();
+    ctx.ellipse(cx - size * 0.35, cy - size * 0.1, toeRadius, toeRadius * 1.3, -Math.PI / 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Toe 2 (middle left)
+    ctx.beginPath();
+    ctx.ellipse(cx - size * 0.12, cy - size * 0.3, toeRadius, toeRadius * 1.3, -Math.PI / 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Toe 3 (middle right)
+    ctx.beginPath();
+    ctx.ellipse(cx + size * 0.12, cy - size * 0.3, toeRadius, toeRadius * 1.3, Math.PI / 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Toe 4 (right)
+    ctx.beginPath();
+    ctx.ellipse(cx + size * 0.35, cy - size * 0.1, toeRadius, toeRadius * 1.3, Math.PI / 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawCatFaceShape(ctx, cx, cy, size) {
+    ctx.beginPath();
+    // Face circle
+    ctx.arc(cx, cy, size * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Left ear
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.4, cy - size * 0.15);
+    ctx.lineTo(cx - size * 0.5, cy - size * 0.5);
+    ctx.lineTo(cx - size * 0.15, cy - size * 0.35);
+    ctx.closePath();
+    ctx.fill();
+
+    // Right ear
+    ctx.beginPath();
+    ctx.moveTo(cx + size * 0.4, cy - size * 0.15);
+    ctx.lineTo(cx + size * 0.5, cy - size * 0.5);
+    ctx.lineTo(cx + size * 0.15, cy - size * 0.35);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  update() {
+    // Adiciona corações espontâneos no fundo
+    if (Math.random() < 0.04 && this.particles.length < 60) {
+      this.spawnHeart();
+    }
+
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.y += p.speedY;
+      
+      // Movimento de ziguezague (sway)
+      p.sway += p.swaySpeed;
+      p.x += p.speedX + Math.sin(p.sway) * 0.4;
+      
+      // Decaimento de opacidade gradual se subirem muito
+      if (p.y < 100) {
+        p.opacity -= 0.005;
+      }
+
+      // Remove fora da tela ou sumidos
+      if (p.y < -50 || p.x < -50 || p.x > this.canvas.width + 50 || p.opacity <= 0) {
+        this.particles.splice(i, 1);
+        continue;
+      }
+
+      // Desenha partícula
+      this.ctx.fillStyle = `hsla(${p.colorHue}, 90%, 65%, ${p.opacity})`;
+      if (p.type === 'paw') {
+        this.drawPawShape(this.ctx, p.x, p.y, p.size);
+      } else if (p.type === 'cat') {
+        this.drawCatFaceShape(this.ctx, p.x, p.y, p.size);
+      } else {
+        this.drawHeartShape(this.ctx, p.x, p.y, p.size);
+      }
+    }
+  }
+
+  loop() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.update();
+    requestAnimationFrame(() => this.loop());
+  }
+}
+
+// ==========================================
+// 2. SINTETIZADOR DE MÚSICA & SONS (WEB AUDIO API)
+// ==========================================
+class RomanticSynth {
+  constructor() {
+    this.ctx = null;
+    this.musicInterval = null;
+    this.isMuted = false;
+    this.melodyIndex = 0;
+    
+    // Progressão harmônica romântica suave
+    // Cmaj9 -> Am9 -> Fmaj7 -> G6
+    this.chords = [
+      [261.63, 329.63, 392.00, 493.88], // C, E, G, B
+      [220.00, 261.63, 329.63, 392.00], // A, C, E, G
+      [174.61, 220.00, 261.63, 349.23], // F, A, C, F
+      [196.00, 246.94, 293.66, 392.00]  // G, B, D, G
+    ];
+  }
+
+  init() {
+    if (this.ctx) return;
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  playTone(freq, type, duration, volume, slideTo = null) {
+    if (this.isMuted || !this.ctx) return;
+    
+    // Garante que o contexto está ativo (politica de autoplay)
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+    
+    if (slideTo) {
+      osc.frequency.exponentialRampToValueAtTime(slideTo, this.ctx.currentTime + duration);
+    }
+
+    gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + duration);
+  }
+
+  // Efeito de sucesso: Arpejo ascendente alegre
+  playMatchSound() {
+    this.init();
+    const now = this.ctx ? this.ctx.currentTime : 0;
+    const notes = [261.63, 329.63, 392.00, 523.25]; // C4, E4, G4, C5
+    notes.forEach((freq, index) => {
+      setTimeout(() => {
+        this.playTone(freq, 'sine', 0.6, 0.15);
+      }, index * 100);
+    });
+  }
+
+  // Efeito de erro: Queda de tom cômica/suave
+  playMismatchSound() {
+    this.init();
+    this.playTone(196.00, 'triangle', 0.5, 0.2, 110.00);
+  }
+
+  // Clique de botão fofo
+  playClickSound() {
+    this.init();
+    this.playTone(440.00, 'sine', 0.1, 0.1, 880.00);
+  }
+
+  // Fanfarra de finalização
+  playFanfareSound() {
+    this.init();
+    const chords = [261.63, 329.63, 392.00]; // Dó maior
+    chords.forEach(f => this.playTone(f, 'triangle', 1.5, 0.1));
+    setTimeout(() => {
+      chords.forEach(f => this.playTone(f * 1.5, 'sine', 2.0, 0.1));
+    }, 300);
+  }
+
+  // Som de mensagem enviada no chat
+  playChatSentSound() {
+    this.init();
+    this.playTone(587.33, 'sine', 0.1, 0.08, 880.00);
+  }
+
+  // Som de mensagem recebida no chat
+  playChatReceivedSound() {
+    this.init();
+    this.playTone(880.00, 'sine', 0.08, 0.08);
+    setTimeout(() => {
+      this.playTone(1046.50, 'sine', 0.12, 0.08);
+    }, 60);
+  }
+
+  // Música de fundo gerada em tempo real
+  startAmbientMusic() {
+    this.init();
+    if (this.musicInterval) return;
+    
+    this.isPlayingMusic = true;
+    let chordIndex = 0;
+    let noteStep = 0;
+
+    const playNextNote = () => {
+      if (!this.isPlayingMusic || this.isMuted) return;
+      
+      const currentChord = this.chords[chordIndex];
+      const noteFreq = currentChord[noteStep % currentChord.length];
+      
+      // Toca uma nota suave
+      // Multiplica frequência por 2 ocasionalmente para variar a oitava
+      const octave = (noteStep % 5 === 0) ? 2 : 1;
+      this.playTone(noteFreq * octave, 'sine', 2.5, 0.04);
+
+      noteStep++;
+      if (noteStep % 4 === 0) {
+        chordIndex = (chordIndex + 1) % this.chords.length;
+      }
+    };
+
+    // Toca uma nota a cada 1.2 segundos
+    this.musicInterval = setInterval(playNextNote, 1200);
+    playNextNote();
+  }
+
+  stopAmbientMusic() {
+    this.isPlayingMusic = false;
+    if (this.musicInterval) {
+      clearInterval(this.musicInterval);
+      this.musicInterval = null;
+    }
+  }
+
+  toggleMute() {
+    this.isMuted = !this.isMuted;
+    if (this.isMuted) {
+      this.stopAmbientMusic();
+    } else {
+      this.startAmbientMusic();
+    }
+    return this.isMuted;
+  }
+}
+
+// ==========================================
+// 3. MÁQUINA DE ESTADO DO JOGO & MULTIPLAYER P2P
+// ==========================================
+class AffinityApp {
+  constructor() {
+    this.config = coupleConfig;
+    this.canvas = new HeartCanvas();
+    this.synth = new RomanticSynth();
+    
+    // Idioma Ativo
+    this.currentLang = localStorage.getItem('namorados_lang') || 'pt';
+
+    // Estado Geral do Jogo
+    this.p1Name = "";
+    this.p2Name = "";
+    this.currentQuestionIdx = 0;
+    this.p1Answers = [];
+    this.p2Answers = [];
+    this.matchesCount = 0;
+
+    // Estado do Multiplayer P2P
+    this.isMultiplayer = false;
+    this.isHost = false;
+    this.peer = null;
+    this.conn = null;
+    this.roomCode = "";
+    this.myChosenIdx = null;
+    this.partnerChosenIdx = null;
+    this.activeQuestionsIndices = [];
+    this.activeQuestionsSubjects = [];
+    this.unreadCount = 0;
+
+    // Elementos DOM
+    this.screens = {
+      welcome: document.getElementById('screen-welcome'),
+      quiz: document.getElementById('screen-quiz'),
+      results: document.getElementById('screen-results')
+    };
+
+    this.quizSteps = {
+      p1Turn: document.getElementById('quiz-p1-turn'),
+      transition: document.getElementById('quiz-transition'),
+      p2Turn: document.getElementById('quiz-p2-turn'),
+      reveal: document.getElementById('quiz-reveal')
+    };
+
+    this.setupEventListeners();
+    this.updateLanguage();
+    this.checkUrlParams();
+  }
+
+  checkUrlParams() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomFromUrl = urlParams.get('room');
+    
+    if (roomFromUrl) {
+      // Abre o painel multiplayer automaticamente na aba de entrar
+      this.synth.playClickSound();
+      
+      // Ajusta layout
+      document.getElementById('play-mode-selection').classList.add('hidden');
+      document.getElementById('multiplayer-panel').classList.remove('hidden');
+      document.getElementById('mp-guest-block').classList.remove('hidden');
+      document.getElementById('mp-lobby-actions').classList.add('hidden');
+      
+      document.getElementById('join-room-code').value = roomFromUrl;
+      
+      // Ajusta placeholders de nomes para multiplayer
+      const langConfig = this.config[this.currentLang];
+      document.getElementById('lbl-player1-name').textContent = langConfig.ui.lblP1NameOnline;
+    }
+  }
+
+  setupEventListeners() {
+    // Escolha: Jogar Online (Mostra painel MP)
+    document.getElementById('btn-play-online').addEventListener('click', () => {
+      this.synth.playClickSound();
+      
+      const p1Input = document.getElementById('player1-name');
+      this.p1Name = p1Input.value.trim();
+      
+      if (!this.p1Name) {
+        // Força preencher o primeiro nome
+        p1Input.focus();
+        p1Input.classList.add('shake-animation');
+        setTimeout(() => p1Input.classList.remove('shake-animation'), 500);
+        return;
+      }
+
+      // Ajusta labels do formulário
+      const langConfig = this.config[this.currentLang];
+      document.getElementById('lbl-player1-name').textContent = langConfig.ui.lblP1NameOnline;
+      document.getElementById('play-mode-selection').classList.add('hidden');
+      document.getElementById('multiplayer-panel').classList.remove('hidden');
+    });
+
+    // Criar Sala (Host)
+    document.getElementById('btn-create-room').addEventListener('click', () => {
+      this.synth.playClickSound();
+      this.isHost = true;
+      this.isMultiplayer = true;
+      
+      // Gera código aleatório
+      const code = Math.floor(1000 + Math.random() * 9000).toString();
+      this.roomCode = code;
+      
+      document.getElementById('mp-lobby-actions').classList.add('hidden');
+      document.getElementById('mp-host-block').classList.remove('hidden');
+      document.getElementById('room-code-val').textContent = code;
+
+      this.initPeer(true, code);
+    });
+
+    // Exibir Caixa para Entrar na Sala (Guest)
+    document.getElementById('btn-show-join').addEventListener('click', () => {
+      this.synth.playClickSound();
+      document.getElementById('mp-lobby-actions').classList.add('hidden');
+      document.getElementById('mp-guest-block').classList.remove('hidden');
+    });
+
+    // Conectar ao Amor (Guest clicks join)
+    document.getElementById('btn-guest-join').addEventListener('click', () => {
+      this.synth.playClickSound();
+      const codeInput = document.getElementById('join-room-code');
+      const code = codeInput.value.trim();
+      
+      if (!code) {
+        codeInput.focus();
+        return;
+      }
+      
+      this.isHost = false;
+      this.isMultiplayer = true;
+      this.roomCode = code;
+
+      document.getElementById('lbl-mp-guest-connecting').classList.remove('hidden');
+      this.initPeer(false, code);
+    });
+
+    // Copiar código / link da sala
+    document.getElementById('btn-copy-code').addEventListener('click', () => {
+      this.synth.playClickSound();
+      
+      const copyToClipboard = (text) => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard.writeText(text);
+        } else {
+          return new Promise((resolve, reject) => {
+            try {
+              const textArea = document.createElement("textarea");
+              textArea.value = text;
+              textArea.style.top = "0";
+              textArea.style.left = "0";
+              textArea.style.position = "fixed";
+              document.body.appendChild(textArea);
+              textArea.focus();
+              textArea.select();
+              const successful = document.execCommand('copy');
+              document.body.removeChild(textArea);
+              if (successful) resolve();
+              else reject(new Error("fallback copy failed"));
+            } catch (err) {
+              reject(err);
+            }
+          });
+        }
+      };
+
+      copyToClipboard(this.roomCode).then(() => {
+        const btn = document.getElementById('btn-copy-code');
+        btn.textContent = "✅";
+        setTimeout(() => btn.textContent = "📋", 2000);
+      }).catch(err => {
+        console.error("Failed to copy:", err);
+      });
+    });
+
+    // Cancelar Multiplayer Panel
+    document.getElementById('btn-mp-cancel').addEventListener('click', () => {
+      this.synth.playClickSound();
+      this.disconnectPeer();
+      
+      const langConfig = this.config[this.currentLang];
+      document.getElementById('lbl-player1-name').textContent = langConfig.ui.labelP1Name;
+      document.getElementById('play-mode-selection').classList.remove('hidden');
+      
+      // Oculta blocos multiplayer
+      document.getElementById('multiplayer-panel').classList.add('hidden');
+      document.getElementById('mp-host-block').classList.add('hidden');
+      document.getElementById('mp-guest-block').classList.add('hidden');
+      document.getElementById('mp-lobby-actions').classList.remove('hidden');
+      document.getElementById('lbl-mp-guest-connecting').classList.add('hidden');
+      document.getElementById('mp-host-start-container').classList.add('hidden');
+      document.getElementById('lbl-mp-waiting-partner').classList.remove('hidden');
+    });
+
+    // Host inicia o teste multiplayer
+    document.getElementById('btn-host-start').addEventListener('click', () => {
+      this.synth.playClickSound();
+      if (this.conn && this.conn.open) {
+        const pool = coupleQuestionsPool[this.currentLang];
+        const indices = [];
+        while (indices.length < Math.min(10, pool.length)) {
+          const idx = Math.floor(Math.random() * pool.length);
+          if (!indices.includes(idx)) {
+            indices.push(idx);
+          }
+        }
+        this.activeQuestionsIndices = indices;
+
+        // Gera aleatoriamente o sujeito da pergunta ('p1' ou 'p2')
+        const subjects = indices.map(() => Math.random() < 0.5 ? 'p1' : 'p2');
+        this.activeQuestionsSubjects = subjects;
+
+        this.conn.send({
+          type: 'START_GAME',
+          p1Name: this.p1Name,
+          p2Name: this.p2Name,
+          questionIndices: indices,
+          questionSubjects: subjects
+        });
+        this.synth.startAmbientMusic();
+        this.startQuiz();
+      }
+    });
+
+    // Clique na Tela de Transição (Local Mode)
+    document.getElementById('btn-continue-p2').addEventListener('click', () => {
+      this.synth.playClickSound();
+      this.showQuizStep('p2Turn');
+      this.renderP2Question();
+    });
+
+    // Avançar da Tela de Revelação
+    document.getElementById('btn-next-question').addEventListener('click', () => {
+      this.synth.playClickSound();
+      
+      if (this.isMultiplayer) {
+        if (this.isHost) {
+          this.conn.send({ type: 'NEXT_QUESTION' });
+          this.nextQuestionMultiplayer();
+        }
+      } else {
+        this.currentQuestionIdx++;
+        if (this.currentQuestionIdx < this.getActiveQuestions().length) {
+          this.startNewQuestion();
+        } else {
+          this.goToResults();
+        }
+      }
+    });
+
+    // Reiniciar Quiz
+    document.getElementById('btn-restart').addEventListener('click', () => {
+      this.synth.playClickSound();
+      if (this.isMultiplayer) {
+        if (this.isHost && this.conn && this.conn.open) {
+          const pool = coupleQuestionsPool[this.currentLang];
+          const indices = [];
+          while (indices.length < Math.min(10, pool.length)) {
+            const idx = Math.floor(Math.random() * pool.length);
+            if (!indices.includes(idx)) {
+              indices.push(idx);
+            }
+          }
+          this.activeQuestionsIndices = indices;
+
+          // Gera aleatoriamente o sujeito da pergunta ('p1' ou 'p2')
+          const subjects = indices.map(() => Math.random() < 0.5 ? 'p1' : 'p2');
+          this.activeQuestionsSubjects = subjects;
+
+          this.conn.send({
+            type: 'RESTART',
+            questionIndices: indices,
+            questionSubjects: subjects
+          });
+        }
+        this.resetQuizMultiplayer();
+      } else {
+        this.resetQuiz();
+        this.switchScreen('welcome');
+      }
+    });
+
+    // Áudio Toggle
+    const btnAudio = document.getElementById('btn-audio-toggle');
+    btnAudio.addEventListener('click', () => {
+      const isMuted = this.synth.toggleMute();
+      if (isMuted) {
+        btnAudio.classList.add('muted');
+        btnAudio.style.opacity = '0.5';
+      } else {
+        btnAudio.classList.remove('muted');
+        btnAudio.style.opacity = '1.0';
+      }
+    });
+
+    // Alternar Idioma (Flag Toggle)
+    const btnLang = document.getElementById('btn-lang-toggle');
+    btnLang.addEventListener('click', () => {
+      this.currentLang = this.currentLang === 'pt' ? 'en' : 'pt';
+      localStorage.setItem('namorados_lang', this.currentLang);
+      this.synth.playClickSound();
+      this.updateLanguage();
+
+      // Recarrega telas ativas se estiver no meio do quiz
+      if (this.screens.quiz.classList.contains('active')) {
+        const langConfig = this.config[this.currentLang];
+        const totalQ = this.getActiveQuestions().length;
+        document.getElementById('question-number').textContent = langConfig.ui.questionHeader
+          .replace('{num}', this.currentQuestionIdx + 1)
+          .replace('{total}', totalQ);
+        
+        const currentScorePercent = this.currentQuestionIdx > 0 
+          ? Math.round((this.matchesCount / this.currentQuestionIdx) * 100) 
+          : 0;
+        document.getElementById('affinity-score-preview').textContent = langConfig.ui.scoreHeader.replace('{score}', currentScorePercent);
+
+        if (this.isMultiplayer) {
+          this.renderMultiplayerQuestion();
+        } else {
+          if (this.quizSteps.p1Turn.classList.contains('active')) {
+            this.renderP1Question();
+          } else if (this.quizSteps.p2Turn.classList.contains('active')) {
+            this.renderP2Question();
+          } else if (this.quizSteps.reveal.classList.contains('active')) {
+            this.revealMatch();
+          }
+        }
+      } else if (this.screens.results.classList.contains('active')) {
+        const langConfig = this.config[this.currentLang];
+        const totalQ = this.getActiveQuestions().length;
+        const finalPercent = Math.round((this.matchesCount / totalQ) * 100);
+        let rank = langConfig.affinityTitles[0];
+        for (const titleObj of langConfig.affinityTitles) {
+          if (finalPercent >= titleObj.min && finalPercent <= titleObj.max) {
+            rank = titleObj;
+            break;
+          }
+        }
+        document.getElementById('affinity-rank-title').textContent = rank.title;
+        document.getElementById('affinity-rank-desc').textContent = rank.description;
+      }
+    });
+
+    // Chat Toggle: Expand
+    document.getElementById('btn-chat-toggle-collapsed').addEventListener('click', () => {
+      this.synth.playClickSound();
+      const chatContainer = document.getElementById('mp-chat-container');
+      chatContainer.classList.remove('collapsed');
+      this.unreadCount = 0;
+      this.updateChatBadge();
+      // Scroll to bottom when opening
+      setTimeout(() => {
+        const msgs = document.getElementById('chat-messages');
+        if (msgs) msgs.scrollTop = msgs.scrollHeight;
+      }, 100);
+    });
+
+    // Chat Toggle: Collapse
+    document.getElementById('btn-chat-close').addEventListener('click', () => {
+      this.synth.playClickSound();
+      document.getElementById('mp-chat-container').classList.add('collapsed');
+    });
+
+    // Chat Send Form
+    document.getElementById('chat-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.sendChatMessage();
+    });
+
+    // Captura cliques na tela para explodir corações interativos
+    window.addEventListener('click', (e) => {
+      // Ignora cliques em botões para não sobrepor
+      if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && !e.target.closest('.option-btn')) {
+        this.canvas.spawnHeart(e.clientX - 10, e.clientY - 10, Math.random() * 20 + 10);
+      }
+    });
+  }
+
+  // ==========================================
+  // MULTIPLAYER CONTROLLER (PEERJS)
+  // ==========================================
+  initPeer(isHost, code) {
+    const statusDot = document.getElementById('conn-status-dot');
+    const statusText = document.getElementById('conn-status-text');
+    const statusContainer = document.getElementById('conn-status-container');
+    const langConfig = this.config[this.currentLang];
+
+    statusContainer.classList.remove('hidden');
+    statusDot.className = "status-dot connecting";
+    statusText.textContent = langConfig.ui.lblMpConnectingStatus;
+
+    // Conecta ao servidor sinalizador gratuito do PeerJS
+    if (isHost) {
+      this.peer = new Peer(`namorados-love-${code}`);
+      
+      this.peer.on('open', () => {
+        console.log("Sala criada com ID:", this.peer.id);
+      });
+
+      this.peer.on('connection', (conn) => {
+        this.conn = conn;
+        this.setupConnectionCallbacks();
+      });
+
+      this.peer.on('error', (err) => {
+        console.error("Erro no Host Peer:", err);
+        if (err.type === 'unavailable-id') {
+          // Tenta novamente com outro código
+          const newCode = Math.floor(1000 + Math.random() * 9000).toString();
+          this.roomCode = newCode;
+          document.getElementById('room-code-val').textContent = newCode;
+          this.initPeer(true, newCode);
+        } else {
+          this.handleDisconnect();
+        }
+      });
+    } else {
+      this.peer = new Peer();
+      
+      this.peer.on('open', () => {
+        console.log("Guest conectado ao sinalizador, conectando à sala:", code);
+        this.conn = this.peer.connect(`namorados-love-${code}`);
+        this.setupConnectionCallbacks();
+      });
+
+      this.peer.on('error', (err) => {
+        console.error("Erro no Guest Peer:", err);
+        this.handleDisconnect();
+      });
+    }
+  }
+
+  setupConnectionCallbacks() {
+    const statusDot = document.getElementById('conn-status-dot');
+    const statusText = document.getElementById('conn-status-text');
+    const langConfig = this.config[this.currentLang];
+
+    this.conn.on('open', () => {
+      statusDot.className = "status-dot online";
+      statusText.textContent = langConfig.ui.lblMpConnectedStatus;
+      this.synth.playMatchSound();
+
+      // Mostra o container de chat e recolhe por padrão
+      const chatContainer = document.getElementById('mp-chat-container');
+      if (chatContainer) {
+        chatContainer.classList.remove('hidden');
+        chatContainer.classList.add('collapsed');
+        this.unreadCount = 0;
+        this.updateChatBadge();
+        // Limpa mensagens anteriores
+        const msgs = document.getElementById('chat-messages');
+        if (msgs) msgs.innerHTML = "";
+      }
+
+      if (this.isHost) {
+        // Envia nome do host
+        this.conn.send({
+          type: 'SYNC_NAME',
+          role: 'host',
+          name: this.p1Name
+        });
+      } else {
+        // Envia nome do guest
+        this.conn.send({
+          type: 'SYNC_NAME',
+          role: 'guest',
+          name: this.p1Name // Nome do guest estava no input player1-name
+        });
+      }
+    });
+
+    this.conn.on('data', (data) => {
+      this.handleIncomingData(data);
+    });
+
+    this.conn.on('close', () => {
+      this.handleDisconnect();
+    });
+
+    this.conn.on('error', (err) => {
+      console.error("Erro na conexão:", err);
+      this.handleDisconnect();
+    });
+  }
+
+  handleIncomingData(data) {
+    const langConfig = this.config[this.currentLang];
+    
+    switch (data.type) {
+      case 'SYNC_NAME':
+        if (this.isHost) {
+          // Recebe nome do guest
+          this.p2Name = data.name;
+          document.getElementById('lbl-mp-waiting-partner').classList.add('hidden');
+          document.getElementById('mp-host-start-container').classList.remove('hidden');
+          this.synth.playMatchSound();
+        } else {
+          // Guest sincroniza nomes: Host passa a ser P1, Guest passa a ser P2
+          this.p2Name = this.p1Name; // Salva meu nome em P2
+          this.p1Name = data.name;   // Salva nome do parceiro em P1
+          
+          // Envia de volta o nome do Guest para o Host fechar a sincronização
+          this.conn.send({
+            type: 'SYNC_NAME',
+            role: 'guest',
+            name: this.p2Name
+          });
+          
+          // Mostra tela de aguardo para o guest
+          document.getElementById('mp-guest-block').innerHTML = `
+            <div class="mp-status-card">
+              <p class="mp-success-text">${langConfig.ui.lblMpConnected}</p>
+              <p class="mp-waiting-text">${langConfig.ui.lblMpWaitingHost}</p>
+            </div>
+          `;
+          this.synth.playMatchSound();
+        }
+        break;
+
+      case 'START_GAME':
+        // Guest recebe autorização para iniciar
+        this.p1Name = data.p1Name;
+        this.p2Name = data.p2Name;
+        this.activeQuestionsIndices = data.questionIndices;
+        this.activeQuestionsSubjects = data.questionSubjects || [];
+        document.querySelectorAll('.p1-name-display').forEach(el => el.textContent = this.p1Name);
+        document.querySelectorAll('.p2-name-display').forEach(el => el.textContent = this.p2Name);
+        
+        this.synth.startAmbientMusic();
+        this.startQuiz();
+        break;
+
+      case 'CHOICE':
+        this.partnerChosenIdx = data.choiceIdx;
+        if (this.myChosenIdx !== null) {
+          this.revealMatchMultiplayer();
+        }
+        break;
+
+      case 'NEXT_QUESTION':
+        this.nextQuestionMultiplayer();
+        break;
+
+      case 'RESTART':
+        if (!this.isHost) {
+          this.activeQuestionsIndices = data.questionIndices;
+          this.activeQuestionsSubjects = data.questionSubjects || [];
+        }
+        this.resetQuizMultiplayer();
+        break;
+
+      case 'CHAT_MSG':
+        this.appendChatMessage(data.sender, data.text, false);
+        
+        // Abre o chat automaticamente se estiver fechado
+        const chatContainer = document.getElementById('mp-chat-container');
+        if (chatContainer && chatContainer.classList.contains('collapsed')) {
+          chatContainer.classList.remove('collapsed');
+          this.unreadCount = 0;
+          this.updateChatBadge();
+          
+          setTimeout(() => {
+            const msgs = document.getElementById('chat-messages');
+            if (msgs) msgs.scrollTop = msgs.scrollHeight;
+          }, 100);
+        }
+        
+        // Toca som de mensagem recebida
+        this.synth.playChatReceivedSound();
+        break;
+    }
+  }
+
+  handleDisconnect() {
+    const statusDot = document.getElementById('conn-status-dot');
+    const statusText = document.getElementById('conn-status-text');
+    const langConfig = this.config[this.currentLang];
+
+    statusDot.className = "status-dot offline";
+    statusText.textContent = langConfig.ui.lblMpDisconnectedStatus;
+    this.synth.playMismatchSound();
+
+    // Oculta chat
+    const chatContainer = document.getElementById('mp-chat-container');
+    if (chatContainer) {
+      chatContainer.classList.add('hidden');
+    }
+
+    if (this.screens.quiz.classList.contains('active')) {
+      alert(this.currentLang === 'pt' ? "Conexão com seu amor perdida! 💔" : "Connection with your partner lost! 💔");
+      this.resetQuiz();
+      this.switchScreen('welcome');
+    }
+  }
+
+  disconnectPeer() {
+    if (this.conn) {
+      this.conn.close();
+      this.conn = null;
+    }
+    if (this.peer) {
+      this.peer.destroy();
+      this.peer = null;
+    }
+    document.getElementById('conn-status-container').classList.add('hidden');
+    this.isMultiplayer = false;
+
+    // Oculta chat
+    const chatContainer = document.getElementById('mp-chat-container');
+    if (chatContainer) {
+      chatContainer.classList.add('hidden');
+    }
+  }
+
+  // ==========================================
+  // JOGO: QUIZ BILINGUE / MULTIPLAYER
+  // ==========================================
+  updateLanguage() {
+    const langConfig = this.config[this.currentLang];
+    
+    // Atualiza a bandeira
+    const btnLang = document.getElementById('btn-lang-toggle');
+    btnLang.innerHTML = this.currentLang === 'pt' ? FLAG_BR : FLAG_US;
+
+    // Welcome screen translation
+    document.getElementById('lbl-welcome-title').textContent = langConfig.ui.welcomeTitle;
+    document.getElementById('lbl-welcome-subtitle').textContent = langConfig.ui.welcomeSubtitle;
+    document.getElementById('lbl-welcome-intro').textContent = langConfig.ui.welcomeIntro;
+    document.getElementById('lbl-player1-name').textContent = this.isMultiplayer ? langConfig.ui.lblP1NameOnline : langConfig.ui.labelP1Name;
+    document.getElementById('player1-name').placeholder = langConfig.ui.placeholderP1;
+
+    // Welcome actions
+    document.getElementById('btn-play-online').textContent = langConfig.ui.btnPlayOnline;
+
+    // Multiplayer Panel
+    document.getElementById('btn-create-room').textContent = langConfig.ui.btnCreateRoom;
+    document.getElementById('btn-show-join').textContent = langConfig.ui.btnShowJoin;
+    document.getElementById('lbl-mp-room-code-title').textContent = langConfig.ui.lblMpRoomCodeTitle;
+    document.getElementById('lbl-mp-waiting-partner').textContent = langConfig.ui.lblMpWaitingPartner;
+    document.getElementById('lbl-mp-connected').textContent = langConfig.ui.lblMpConnected;
+    document.getElementById('btn-host-start').textContent = langConfig.ui.btnHostStart;
+    document.getElementById('lbl-mp-join-code-label').textContent = langConfig.ui.lblMpJoinCodeLabel;
+    document.getElementById('join-room-code').placeholder = langConfig.ui.placeholderJoinCode;
+    document.getElementById('btn-guest-join').textContent = langConfig.ui.btnGuestJoin;
+    document.getElementById('lbl-mp-guest-connecting').textContent = langConfig.ui.lblMpGuestConnecting;
+    document.getElementById('btn-mp-cancel').textContent = langConfig.ui.btnMpCancel;
+
+    // Connection Status
+    const statusText = document.getElementById('conn-status-text');
+    const statusDot = document.getElementById('conn-status-dot');
+    if (statusDot) {
+      if (statusDot.classList.contains('online')) {
+        statusText.textContent = langConfig.ui.lblMpConnectedStatus;
+      } else if (statusDot.classList.contains('connecting')) {
+        statusText.textContent = langConfig.ui.lblMpConnectingStatus;
+      } else {
+        statusText.textContent = langConfig.ui.lblMpDisconnectedStatus;
+      }
+    }
+
+    // Quiz and Transition translation
+    document.getElementById('lbl-p1-tip').textContent = langConfig.ui.p1Tip;
+    document.getElementById('lbl-transition-title').textContent = langConfig.ui.choiceSaved;
+    document.getElementById('lbl-transition-desc').innerHTML = langConfig.ui.transitionMsg.replace('{name}', this.p2Name || (this.currentLang === 'pt' ? 'Amor 2' : 'Love 2'));
+    document.getElementById('btn-continue-p2').textContent = langConfig.ui.btnTransition;
+    document.getElementById('lbl-p2-tip').textContent = langConfig.ui.p2Tip;
+
+    // Results screen translation
+    document.getElementById('lbl-results-title').textContent = langConfig.ui.resultsTitle;
+    document.getElementById('lbl-results-subtitle').textContent = langConfig.ui.resultsSubtitle;
+    document.getElementById('lbl-results-sync-label').textContent = langConfig.ui.resultsSyncLabel;
+    document.getElementById('btn-restart').textContent = langConfig.ui.btnRestart;
+
+    // Chat translation
+    const chatInput = document.getElementById('chat-input');
+    if (chatInput) {
+      chatInput.placeholder = this.currentLang === 'pt' ? "Escreva uma mensagem..." : "Type a message...";
+    }
+  }
+
+  switchScreen(screenName) {
+    Object.values(this.screens).forEach(screen => screen.classList.remove('active'));
+    this.screens[screenName].classList.add('active');
+  }
+
+  showQuizStep(stepName) {
+    Object.values(this.quizSteps).forEach(step => step.classList.remove('active'));
+    this.quizSteps[stepName].classList.add('active');
+  }
+
+  getActiveQuestions() {
+    return this.activeQuestionsIndices.map(idx => coupleQuestionsPool[this.currentLang][idx]);
+  }
+
+  startQuiz() {
+    // Atualiza displays de nomes na tela do HTML
+    document.querySelectorAll('.p1-name-display').forEach(el => el.textContent = this.p1Name);
+    document.querySelectorAll('.p2-name-display').forEach(el => el.textContent = this.p2Name);
+
+    // Ajusta o texto da transição com o nome do parceiro
+    const langConfig = this.config[this.currentLang];
+    document.getElementById('lbl-transition-desc').innerHTML = langConfig.ui.transitionMsg.replace('{name}', this.p2Name);
+
+    this.currentQuestionIdx = 0;
+    this.p1Answers = [];
+    this.p2Answers = [];
+    this.matchesCount = 0;
+    this.myChosenIdx = null;
+    this.partnerChosenIdx = null;
+
+    if (!this.isMultiplayer) {
+      const pool = coupleQuestionsPool[this.currentLang];
+      const indices = [];
+      while (indices.length < Math.min(10, pool.length)) {
+        const idx = Math.floor(Math.random() * pool.length);
+        if (!indices.includes(idx)) {
+          indices.push(idx);
+        }
+      }
+      this.activeQuestionsIndices = indices;
+      this.activeQuestionsSubjects = indices.map(() => Math.random() < 0.5 ? 'p1' : 'p2');
+    }
+
+    this.switchScreen('quiz');
+    this.startNewQuestion();
+  }
+
+  startNewQuestion() {
+    const langConfig = this.config[this.currentLang];
+    const activeQ = this.getActiveQuestions();
+    const totalQ = activeQ.length;
+    const progressPercent = ((this.currentQuestionIdx) / totalQ) * 100;
+    
+    document.getElementById('progress-bar-fill').style.width = `${progressPercent || 5}%`;
+    document.getElementById('question-number').textContent = langConfig.ui.questionHeader
+      .replace('{num}', this.currentQuestionIdx + 1)
+      .replace('{total}', totalQ);
+    
+    // Atualiza pontuação parcial
+    const currentScorePercent = this.currentQuestionIdx > 0 
+      ? Math.round((this.matchesCount / this.currentQuestionIdx) * 100) 
+      : 0;
+    document.getElementById('affinity-score-preview').textContent = langConfig.ui.scoreHeader.replace('{score}', currentScorePercent);
+
+    if (this.isMultiplayer) {
+      this.showQuizStep('p1Turn');
+      
+      // Ajusta o título do turno para online
+      const badge = document.querySelector('#quiz-p1-turn .player-indicator');
+      badge.textContent = this.currentLang === 'pt' ? "Sua Escolha 🌐" : "Your Choice 🌐";
+      badge.className = "player-indicator p1-badge";
+      
+      document.getElementById('lbl-p1-tip').textContent = this.currentLang === 'pt' 
+        ? "Escolha o que você acha que descreve melhor vocês dois!" 
+        : "Choose what you think describes the two of you best!";
+        
+      this.renderMultiplayerQuestion();
+    } else {
+      // Jogo Local Normal
+      this.showQuizStep('p1Turn');
+      const badge = document.querySelector('#quiz-p1-turn .player-indicator');
+      badge.innerHTML = `Vez de <span class="p1-name-display">${this.p1Name}</span>`;
+      badge.className = "player-indicator p1-badge";
+      document.getElementById('lbl-p1-tip').textContent = langConfig.ui.p1Tip;
+      this.renderP1Question();
+    }
+  }
+
+  renderP1Question() {
+    const q = this.getActiveQuestions()[this.currentQuestionIdx];
+    document.getElementById('p1-question-text').textContent = this.getQuestionText(q, this.currentQuestionIdx);
+    
+    const container = document.getElementById('p1-options');
+    container.innerHTML = "";
+    
+    q.options.forEach((opt, idx) => {
+      const btn = document.createElement('button');
+      btn.className = "option-btn";
+      btn.textContent = opt;
+      btn.addEventListener('click', () => this.handleP1Selection(idx));
+      container.appendChild(btn);
+    });
+  }
+
+  handleP1Selection(optionIdx) {
+    this.p1Answers.push(optionIdx);
+    this.synth.playTone(523.25, 'sine', 0.15, 0.1);
+    this.showQuizStep('transition');
+  }
+
+  renderP2Question() {
+    const q = this.getActiveQuestions()[this.currentQuestionIdx];
+    document.getElementById('p2-question-text').textContent = this.getQuestionText(q, this.currentQuestionIdx);
+    
+    const container = document.getElementById('p2-options');
+    container.innerHTML = "";
+    
+    q.options.forEach((opt, idx) => {
+      const btn = document.createElement('button');
+      btn.className = "option-btn";
+      btn.textContent = opt;
+      btn.addEventListener('click', () => this.handleP2Selection(idx));
+      container.appendChild(btn);
+    });
+  }
+
+  handleP2Selection(optionIdx) {
+    this.p2Answers.push(optionIdx);
+    this.synth.playTone(587.33, 'sine', 0.15, 0.1);
+    this.revealMatch();
+  }
+
+  // ==========================================
+  // MULTIPLAYER GAMEPLAY LOGIC
+  // ==========================================
+  renderMultiplayerQuestion() {
+    const q = this.getActiveQuestions()[this.currentQuestionIdx];
+    document.getElementById('p1-question-text').textContent = this.getQuestionText(q, this.currentQuestionIdx);
+    
+    const container = document.getElementById('p1-options');
+    container.innerHTML = "";
+    
+    q.options.forEach((opt, idx) => {
+      const btn = document.createElement('button');
+      btn.className = "option-btn";
+      btn.textContent = opt;
+      btn.addEventListener('click', () => this.handleMultiplayerSelection(idx));
+      container.appendChild(btn);
+    });
+  }
+
+  handleMultiplayerSelection(optionIdx) {
+    this.myChosenIdx = optionIdx;
+    this.synth.playTone(523.25, 'sine', 0.15, 0.1);
+
+    // Envia resposta para o parceiro
+    if (this.conn && this.conn.open) {
+      this.conn.send({
+        type: 'CHOICE',
+        choiceIdx: optionIdx
+      });
+    }
+
+    // Mostra tela de espera local
+    const container = document.getElementById('p1-options');
+    container.innerHTML = `
+      <div class="mp-status-card" style="margin-top: 0px;">
+        <p class="mp-waiting-text">${this.config[this.currentLang].ui.lblMpWaitingChoice}</p>
+      </div>
+    `;
+
+    // Verifica se parceiro já escolheu
+    if (this.partnerChosenIdx !== null) {
+      this.revealMatchMultiplayer();
+    }
+  }
+
+  revealMatchMultiplayer() {
+    this.showQuizStep('reveal');
+    const langConfig = this.config[this.currentLang];
+    const q = this.getActiveQuestions()[this.currentQuestionIdx];
+    
+    // Mapeia quem escolheu o quê
+    let myChoiceText = q.options[this.myChosenIdx];
+    let partnerChoiceText = q.options[this.partnerChosenIdx];
+
+    const p1Box = document.querySelector('.p1-choice-box');
+    const p2Box = document.querySelector('.p2-choice-box');
+    const revealIcon = document.getElementById('reveal-animation-container');
+    const revealTitle = document.getElementById('reveal-title');
+    const revealDesc = document.getElementById('reveal-desc');
+    const nextBtn = document.getElementById('btn-next-question');
+
+    p1Box.className = "reveal-choice-box p1-choice-box";
+    p2Box.className = "reveal-choice-box p2-choice-box";
+    revealIcon.className = "reveal-status-icon";
+
+    // Host é P1, Guest é P2 na tela de resultados. Ajusta labels correspondentes
+    if (this.isHost) {
+      document.getElementById('reveal-p1-choice-text').textContent = myChoiceText;
+      document.getElementById('reveal-p2-choice-text').textContent = partnerChoiceText;
+    } else {
+      document.getElementById('reveal-p1-choice-text').textContent = partnerChoiceText;
+      document.getElementById('reveal-p2-choice-text').textContent = myChoiceText;
+    }
+
+    const isMatch = this.myChosenIdx === this.partnerChosenIdx;
+
+    if (isMatch) {
+      this.matchesCount++;
+      p1Box.classList.add('match-reveal');
+      p2Box.classList.add('match-reveal');
+      revealIcon.textContent = "💖";
+      revealIcon.classList.add('bounce-animation');
+      revealTitle.innerHTML = langConfig.ui.revealMatchTitle;
+      revealDesc.textContent = langConfig.ui.revealMatchDesc;
+      
+      this.synth.playMatchSound();
+      const rect = revealIcon.getBoundingClientRect();
+      this.canvas.spawnBurst(rect.left + rect.width/2, rect.top + rect.height/2, 35);
+    } else {
+      p1Box.classList.add('mismatch-reveal');
+      p2Box.classList.add('mismatch-reveal');
+      revealIcon.textContent = "💔";
+      revealIcon.classList.add('shake-animation');
+      revealTitle.innerHTML = langConfig.ui.revealMismatchTitle;
+      revealDesc.textContent = langConfig.ui.revealMismatchDesc;
+      
+      this.synth.playMismatchSound();
+    }
+
+    // Configura botões de controle de tela
+    const isLastQ = this.currentQuestionIdx === this.getActiveQuestions().length - 1;
+    
+    if (this.isHost) {
+      nextBtn.classList.remove('hidden');
+      nextBtn.textContent = isLastQ ? langConfig.ui.btnFinish : langConfig.ui.btnNext;
+      nextBtn.disabled = false;
+    } else {
+      // Guest apenas aguarda o Host avançar
+      nextBtn.classList.remove('hidden');
+      nextBtn.textContent = langConfig.ui.lblMpWaitingNext;
+      nextBtn.disabled = true;
+      nextBtn.style.opacity = '0.6';
+    }
+  }
+
+  nextQuestionMultiplayer() {
+    this.currentQuestionIdx++;
+    this.myChosenIdx = null;
+    this.partnerChosenIdx = null;
+
+    // Libera botão do guest
+    const nextBtn = document.getElementById('btn-next-question');
+    nextBtn.disabled = false;
+    nextBtn.style.opacity = '1.0';
+
+    if (this.currentQuestionIdx < this.getActiveQuestions().length) {
+      this.startNewQuestion();
+    } else {
+      this.goToResults();
+    }
+  }
+
+  revealMatch() {
+    this.showQuizStep('reveal');
+    const langConfig = this.config[this.currentLang];
+    const activeQ = this.getActiveQuestions();
+    const q = activeQ[this.currentQuestionIdx];
+    const p1ChoiceIdx = this.p1Answers[this.currentQuestionIdx];
+    const p2ChoiceIdx = this.p2Answers[this.currentQuestionIdx];
+
+    const p1ChoiceText = q.options[p1ChoiceIdx];
+    const p2ChoiceText = q.options[p2ChoiceIdx];
+
+    const p1Box = document.querySelector('.p1-choice-box');
+    const p2Box = document.querySelector('.p2-choice-box');
+    const revealIcon = document.getElementById('reveal-animation-container');
+    const revealTitle = document.getElementById('reveal-title');
+    const revealDesc = document.getElementById('reveal-desc');
+    const nextBtn = document.getElementById('btn-next-question');
+
+    p1Box.className = "reveal-choice-box p1-choice-box";
+    p2Box.className = "reveal-choice-box p2-choice-box";
+    revealIcon.className = "reveal-status-icon";
+    
+    document.getElementById('reveal-p1-choice-text').textContent = p1ChoiceText;
+    document.getElementById('reveal-p2-choice-text').textContent = p2ChoiceText;
+
+    const isMatch = p1ChoiceIdx === p2ChoiceIdx;
+
+    if (isMatch) {
+      this.matchesCount++;
+      p1Box.classList.add('match-reveal');
+      p2Box.classList.add('match-reveal');
+      revealIcon.textContent = "💖";
+      revealIcon.classList.add('bounce-animation');
+      revealTitle.innerHTML = langConfig.ui.revealMatchTitle;
+      revealDesc.textContent = langConfig.ui.revealMatchDesc;
+      
+      this.synth.playMatchSound();
+      const rect = revealIcon.getBoundingClientRect();
+      this.canvas.spawnBurst(rect.left + rect.width/2, rect.top + rect.height/2, 35);
+    } else {
+      p1Box.classList.add('mismatch-reveal');
+      p2Box.classList.add('mismatch-reveal');
+      revealIcon.textContent = "💔";
+      revealIcon.classList.add('shake-animation');
+      revealTitle.innerHTML = langConfig.ui.revealMismatchTitle;
+      revealDesc.textContent = langConfig.ui.revealMismatchDesc;
+      
+      this.synth.playMismatchSound();
+    }
+
+    if (this.currentQuestionIdx === activeQ.length - 1) {
+      nextBtn.textContent = langConfig.ui.btnFinish;
+    } else {
+      nextBtn.textContent = langConfig.ui.btnNext;
+    }
+  }
+
+  // ==========================================
+  // RESULTADOS
+  // ==========================================
+  goToResults() {
+    this.switchScreen('results');
+    this.synth.playFanfareSound();
+    
+    const langConfig = this.config[this.currentLang];
+    const totalQ = this.getActiveQuestions().length;
+    const finalPercent = Math.round((this.matchesCount / totalQ) * 100);
+    
+    // Anima a barra circular de progresso (Dashoffset total é 283)
+    const strokeFill = document.getElementById('score-circle-fill');
+    const offset = 283 - (283 * finalPercent) / 100;
+    
+    // Animação de contagem numérica
+    const scoreVal = document.getElementById('score-percentage');
+    let currentCount = 0;
+    const countDuration = 1500; // 1.5s
+    const startTime = performance.now();
+
+    const animateCount = (timestamp) => {
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / countDuration, 1);
+      
+      // Easing out quadratico
+      const easeProgress = progress * (2 - progress);
+      currentCount = Math.round(easeProgress * finalPercent);
+      scoreVal.textContent = `${currentCount}%`;
+
+      if (progress < 1) {
+        requestAnimationFrame(animateCount);
+      }
+    };
+    requestAnimationFrame(animateCount);
+
+    setTimeout(() => {
+      strokeFill.style.strokeDashoffset = offset;
+    }, 100);
+
+    // Determina a mensagem e título de afinidade
+    let rank = langConfig.affinityTitles[0];
+    for (const titleObj of langConfig.affinityTitles) {
+      if (finalPercent >= titleObj.min && finalPercent <= titleObj.max) {
+        rank = titleObj;
+        break;
+      }
+    }
+
+    document.getElementById('affinity-rank-title').textContent = rank.title;
+    document.getElementById('affinity-rank-desc').textContent = rank.description;
+
+    // Dispara uma explosão especial se for 100%
+    if (finalPercent === 100) {
+      setTimeout(() => {
+        this.canvas.spawnBurst(window.innerWidth / 2, window.innerHeight / 2, 80);
+      }, 500);
+    }
+  }
+
+
+
+  getQuestionText(q, activeIndex) {
+    if (!q) return "";
+    
+    // Sujeito da pergunta (P1 ou P2)
+    let subjectRole = 'p1';
+    if (this.activeQuestionsSubjects && this.activeQuestionsSubjects[activeIndex]) {
+      subjectRole = this.activeQuestionsSubjects[activeIndex];
+    } else {
+      // Fallback local: alterna de acordo com o índice
+      subjectRole = (activeIndex % 2 === 0) ? 'p1' : 'p2';
+    }
+
+    const p1 = this.p1Name || (this.currentLang === 'pt' ? 'Amor 1' : 'Love 1');
+    const p2 = this.p2Name || (this.currentLang === 'pt' ? 'Amor 2' : 'Love 2');
+    
+    const player = (subjectRole === 'p1') ? p1 : p2;
+    const partner = (subjectRole === 'p1') ? p2 : p1;
+    
+    return q.text.replace(/{player}/g, player).replace(/{partner}/g, partner);
+  }
+
+  sendChatMessage() {
+    const input = document.getElementById('chat-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    
+    input.value = "";
+    const myName = this.isHost ? this.p1Name : this.p2Name;
+    const sender = myName || (this.currentLang === 'pt' ? 'Amor' : 'Love');
+    
+    // Envia por P2P
+    if (this.conn && this.conn.open) {
+      this.conn.send({
+        type: 'CHAT_MSG',
+        text: text,
+        sender: sender
+      });
+    }
+    
+    // Toca som de envio
+    this.synth.playChatSentSound();
+    
+    // Adiciona na interface
+    this.appendChatMessage(sender, text, true);
+  }
+
+  appendChatMessage(senderName, text, isSent) {
+    const container = document.getElementById('chat-messages');
+    if (!container) return;
+    
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `chat-msg ${isSent ? 'sent' : 'received'}`;
+    
+    const senderSpan = document.createElement('span');
+    senderSpan.className = 'chat-msg-sender';
+    senderSpan.textContent = senderName;
+    
+    const textSpan = document.createElement('span');
+    textSpan.className = 'chat-msg-text';
+    textSpan.textContent = text;
+    
+    msgDiv.appendChild(senderSpan);
+    msgDiv.appendChild(textSpan);
+    container.appendChild(msgDiv);
+    
+    // Scroll para baixo
+    container.scrollTop = container.scrollHeight;
+  }
+
+  updateChatBadge() {
+    const badge = document.getElementById('chat-badge');
+    if (!badge) return;
+    
+    if (this.unreadCount > 0) {
+      badge.textContent = this.unreadCount;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+      badge.textContent = "0";
+    }
+  }
+
+  resetQuiz() {
+    this.currentQuestionIdx = 0;
+    this.p1Answers = [];
+    this.p2Answers = [];
+    this.matchesCount = 0;
+    this.myChosenIdx = null;
+    this.partnerChosenIdx = null;
+    document.getElementById('player1-name').value = "";
+    
+    // Libera botão do guest
+    const nextBtn = document.getElementById('btn-next-question');
+    nextBtn.disabled = false;
+    nextBtn.style.opacity = '1.0';
+  }
+
+  resetQuizMultiplayer() {
+    this.currentQuestionIdx = 0;
+    this.p1Answers = [];
+    this.p2Answers = [];
+    this.matchesCount = 0;
+    this.myChosenIdx = null;
+    this.partnerChosenIdx = null;
+
+    // Libera botão do guest
+    const nextBtn = document.getElementById('btn-next-question');
+    nextBtn.disabled = false;
+    nextBtn.style.opacity = '1.0';
+
+    this.switchScreen('quiz');
+    this.startNewQuestion();
+  }
+}
+
+// Inicializa a aplicação quando a página carrega
+window.addEventListener('DOMContentLoaded', () => {
+  window.app = new AffinityApp();
+});
