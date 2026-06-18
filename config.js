@@ -54,6 +54,24 @@ const coupleConfig = {
       btnNext: "Próxima Questão ➡️",
       btnFinish: "Ver Resultados Finais 🏆",
 
+      // Seleção de Jogo (Welcome)
+      gameModeTitle: "Escolha o Jogo:",
+      modeQuiz: "Afinidade",
+      modeBlind: "Blind Ranking",
+      categoryTitle: "Escolha a Categoria:",
+      btnBackToLobby: "Voltar ao Lobby 🏠",
+
+      // Multiplayer (turno)
+      mpYourChoice: "Sua Escolha 🌐",
+      mpThinkTip: "PENSA QUE NEM EUUUU PENSA QUE NEM EUUUUUU",
+
+      // Blind Ranking
+      liveRankingTitle: "Ranking Atual",
+      blindMathLabel: "Média:",
+      blindSlotLabel: "Slot:",
+      blindRevealDesc: "Ocupou a vaga mais próxima da média!",
+      rankingFinalTitle: "Ranking Final",
+
       resultsTitle: "Resultados do teste de afinidadeee ",
       resultsSubtitle: "PARABÉNSSSSSSS",
       resultsSyncLabel: "Em Sintonia",
@@ -142,6 +160,24 @@ const coupleConfig = {
       revealMismatchDesc: "You h me...",
       btnNext: "Next Question ➡️",
       btnFinish: "See Final Results 🏆",
+
+      // Game Selection (Welcome)
+      gameModeTitle: "Choose the Game:",
+      modeQuiz: "Affinity",
+      modeBlind: "Blind Ranking",
+      categoryTitle: "Choose the Category:",
+      btnBackToLobby: "Back to Lobby 🏠",
+
+      // Multiplayer (turn)
+      mpYourChoice: "Your Choice 🌐",
+      mpThinkTip: "THINK LIKE MEEE THINK LIKE MEEEE",
+
+      // Blind Ranking
+      liveRankingTitle: "Current Ranking",
+      blindMathLabel: "Average:",
+      blindSlotLabel: "Slot:",
+      blindRevealDesc: "Took the closest slot to the average!",
+      rankingFinalTitle: "Final Ranking",
 
       resultsTitle: "Affinity test resultsss ",
       resultsSubtitle: "CONGRATZZZZZZZ",

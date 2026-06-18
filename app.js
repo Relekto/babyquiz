@@ -358,6 +358,14 @@ class AffinityApp {
     this.p2Answers = [];
     this.matchesCount = 0;
 
+    // Estado Blind Ranking
+    this.gameMode = 'quiz';
+    this.selectedCategoryIdx = 0;
+    this.blindRankingTopic = null;
+    this.blindRankingItems = [];
+    this.blindFinalRanking = new Array(10).fill(null);
+    this.blindAvailableSlots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
     // Estado do Multiplayer P2P
     this.isMultiplayer = false;
     this.isHost = false;
@@ -412,6 +420,31 @@ class AffinityApp {
   }
 
   setupEventListeners() {
+    // Game Mode Selection
+    const btnQuiz = document.getElementById('mode-quiz-btn');
+    const btnBlind = document.getElementById('mode-blind-btn');
+    if (btnQuiz && btnBlind) {
+      btnQuiz.addEventListener('click', () => {
+        this.synth.playClickSound();
+        this.gameMode = 'quiz';
+        btnQuiz.classList.add('active');
+        btnBlind.classList.remove('active');
+        this.updateCategoryPickerVisibility();
+      });
+      btnBlind.addEventListener('click', () => {
+        this.synth.playClickSound();
+        this.gameMode = 'blindRank';
+        btnBlind.classList.add('active');
+        btnQuiz.classList.remove('active');
+        this.updateCategoryPickerVisibility();
+        this.renderCategoryPicker();
+      });
+    }
+
+    // Renderiza o seletor de categoria inicial
+    this.renderCategoryPicker();
+    this.updateCategoryPickerVisibility();
+
     // Escolha: Jogar Online (Mostra painel MP)
     document.getElementById('btn-play-online').addEventListener('click', () => {
       this.synth.playClickSound();
@@ -538,27 +571,43 @@ class AffinityApp {
     document.getElementById('btn-host-start').addEventListener('click', () => {
       this.synth.playClickSound();
       if (this.conn && this.conn.open) {
-        const pool = coupleQuestionsPool[this.currentLang];
-        const indices = [];
-        while (indices.length < Math.min(10, pool.length)) {
-          const idx = Math.floor(Math.random() * pool.length);
-          if (!indices.includes(idx)) {
-            indices.push(idx);
+        if (this.gameMode === 'quiz') {
+          const pool = coupleQuestionsPool[this.currentLang];
+          const indices = [];
+          while (indices.length < Math.min(10, pool.length)) {
+            const idx = Math.floor(Math.random() * pool.length);
+            if (!indices.includes(idx)) {
+              indices.push(idx);
+            }
           }
+          this.activeQuestionsIndices = indices;
+          const subjects = indices.map(() => Math.random() < 0.5 ? 'p1' : 'p2');
+          this.activeQuestionsSubjects = subjects;
+          this.conn.send({
+            type: 'START_GAME',
+            gameMode: 'quiz',
+            p1Name: this.p1Name,
+            p2Name: this.p2Name,
+            questionIndices: indices,
+            questionSubjects: subjects
+          });
+        } else {
+          const topics = blindRankingTopics[this.currentLang];
+          this.blindRankingTopic = this.selectedCategoryIdx;
+          const items = topics[this.selectedCategoryIdx].items.map((it, idx) => ({ ...it, idx }));
+          items.sort(() => Math.random() - 0.5);
+          this.blindRankingItems = items.slice(0, 10);
+          this.activeQuestionsIndices = new Array(10).fill(0);
+          this.conn.send({
+            type: 'START_GAME',
+            gameMode: 'blindRank',
+            p1Name: this.p1Name,
+            p2Name: this.p2Name,
+            blindRankingTopic: this.blindRankingTopic,
+            blindRankingItems: this.blindRankingItems,
+            questionIndices: this.activeQuestionsIndices
+          });
         }
-        this.activeQuestionsIndices = indices;
-
-        // Gera aleatoriamente o sujeito da pergunta ('p1' ou 'p2')
-        const subjects = indices.map(() => Math.random() < 0.5 ? 'p1' : 'p2');
-        this.activeQuestionsSubjects = subjects;
-
-        this.conn.send({
-          type: 'START_GAME',
-          p1Name: this.p1Name,
-          p2Name: this.p2Name,
-          questionIndices: indices,
-          questionSubjects: subjects
-        });
         this.synth.startAmbientMusic();
         this.startQuiz();
       }
@@ -593,6 +642,17 @@ class AffinityApp {
     // Reiniciar Quiz
     document.getElementById('btn-restart').addEventListener('click', () => {
       this.synth.playClickSound();
+
+      // Blind Ranking: o jogo termina ao revelar o último ranking. Voltar ao lobby
+      // (mantendo a conexão) para poder jogar outra categoria.
+      if (this.isMultiplayer && this.gameMode === 'blindRank') {
+        if (this.isHost && this.conn && this.conn.open) {
+          this.conn.send({ type: 'BACK_TO_LOBBY' });
+        }
+        this.returnToLobby();
+        return;
+      }
+
       if (this.isMultiplayer) {
         if (this.isHost && this.conn && this.conn.open) {
           const pool = coupleQuestionsPool[this.currentLang];
@@ -657,7 +717,14 @@ class AffinityApp {
         document.getElementById('affinity-score-preview').textContent = langConfig.ui.scoreHeader.replace('{score}', currentScorePercent);
 
         if (this.isMultiplayer) {
-          this.renderMultiplayerQuestion();
+          if (this.gameMode === 'blindRank') {
+            // Blind ranking: updateLanguage() already refreshed the topic title,
+            // item name and reveal text. Just refresh the live ranking board.
+            // Re-rendering options here would wipe an already-made selection.
+            this.updateBlindLiveRanking();
+          } else {
+            this.renderMultiplayerQuestion();
+          }
         } else {
           if (this.quizSteps.p1Turn.classList.contains('active')) {
             this.renderP1Question();
@@ -863,8 +930,15 @@ class AffinityApp {
         // Guest recebe autorização para iniciar
         this.p1Name = data.p1Name;
         this.p2Name = data.p2Name;
-        this.activeQuestionsIndices = data.questionIndices;
-        this.activeQuestionsSubjects = data.questionSubjects || [];
+        this.gameMode = data.gameMode || 'quiz';
+        if (this.gameMode === 'quiz') {
+          this.activeQuestionsIndices = data.questionIndices;
+          this.activeQuestionsSubjects = data.questionSubjects || [];
+        } else {
+          this.activeQuestionsIndices = data.questionIndices;
+          this.blindRankingTopic = data.blindRankingTopic;
+          this.blindRankingItems = data.blindRankingItems;
+        }
         document.querySelectorAll('.p1-name-display').forEach(el => el.textContent = this.p1Name);
         document.querySelectorAll('.p2-name-display').forEach(el => el.textContent = this.p2Name);
 
@@ -881,6 +955,10 @@ class AffinityApp {
 
       case 'NEXT_QUESTION':
         this.nextQuestionMultiplayer();
+        break;
+
+      case 'BACK_TO_LOBBY':
+        this.returnToLobby();
         break;
 
       case 'RESTART':
@@ -971,6 +1049,13 @@ class AffinityApp {
     document.getElementById('lbl-player1-name').textContent = this.isMultiplayer ? langConfig.ui.lblP1NameOnline : langConfig.ui.labelP1Name;
     document.getElementById('player1-name').placeholder = langConfig.ui.placeholderP1;
 
+    // Game mode selection
+    document.getElementById('lbl-game-mode-title').textContent = langConfig.ui.gameModeTitle;
+    document.getElementById('lbl-mode-quiz').textContent = langConfig.ui.modeQuiz;
+    document.getElementById('lbl-mode-blind').textContent = langConfig.ui.modeBlind;
+    document.getElementById('lbl-category-title').textContent = langConfig.ui.categoryTitle;
+    this.renderCategoryPicker();
+
     // Welcome actions
     document.getElementById('btn-play-online').textContent = langConfig.ui.btnPlayOnline;
 
@@ -1011,7 +1096,39 @@ class AffinityApp {
     document.getElementById('lbl-results-title').textContent = langConfig.ui.resultsTitle;
     document.getElementById('lbl-results-subtitle').textContent = langConfig.ui.resultsSubtitle;
     document.getElementById('lbl-results-sync-label').textContent = langConfig.ui.resultsSyncLabel;
-    document.getElementById('btn-restart').textContent = langConfig.ui.btnRestart;
+    document.getElementById('lbl-ranking-final-title').textContent = langConfig.ui.rankingFinalTitle;
+    const onBlindResults = this.gameMode === 'blindRank' && this.screens.results.classList.contains('active');
+    document.getElementById('btn-restart').textContent = onBlindResults ? langConfig.ui.btnBackToLobby : langConfig.ui.btnRestart;
+
+    // Blind Ranking live texts
+    document.getElementById('lbl-live-ranking-title').textContent = langConfig.ui.liveRankingTitle;
+    document.getElementById('lbl-blind-math').textContent = langConfig.ui.blindMathLabel;
+    document.getElementById('lbl-blind-slot').textContent = langConfig.ui.blindSlotLabel;
+
+    // Update in-progress blind question text (title + localized item name) without
+    // touching the rank buttons or selection state.
+    if (this.gameMode === 'blindRank' && this.blindRankingTopic !== null) {
+      const topicData = blindRankingTopics[this.currentLang][this.blindRankingTopic];
+      const titleEl = document.getElementById('blind-p1-topic-title');
+      if (titleEl && topicData) titleEl.textContent = topicData.title;
+
+      const item = this.blindRankingItems[this.currentQuestionIdx];
+      const nameEl = document.getElementById('p1-blind-name');
+      if (nameEl && item) nameEl.textContent = this.getBlindItemName(item);
+
+      // If the blind reveal is showing, refresh its description in the new language.
+      const blindReveal = document.getElementById('reveal-blind-container');
+      if (blindReveal && !blindReveal.classList.contains('hidden')) {
+        document.getElementById('reveal-desc').textContent = langConfig.ui.blindRevealDesc;
+      }
+    }
+
+    // Multiplayer turn badge / tip (refresh if currently on the choosing step)
+    if (this.isMultiplayer && this.quizSteps.p1Turn.classList.contains('active')) {
+      const badge = document.querySelector('#quiz-p1-turn .player-indicator');
+      if (badge) badge.textContent = langConfig.ui.mpYourChoice;
+      document.getElementById('lbl-p1-tip').textContent = langConfig.ui.mpThinkTip;
+    }
 
     // Chat translation
     const chatInput = document.getElementById('chat-input');
@@ -1023,6 +1140,9 @@ class AffinityApp {
   switchScreen(screenName) {
     Object.values(this.screens).forEach(screen => screen.classList.remove('active'));
     this.screens[screenName].classList.add('active');
+    if (screenName !== 'quiz') {
+      this.showBlindLiveRanking(false);
+    }
   }
 
   showQuizStep(stepName) {
@@ -1050,6 +1170,11 @@ class AffinityApp {
     this.myChosenIdx = null;
     this.partnerChosenIdx = null;
 
+    if (this.gameMode === 'blindRank') {
+      this.blindFinalRanking = new Array(10).fill(null);
+      this.blindAvailableSlots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    }
+
     if (!this.isMultiplayer) {
       const pool = coupleQuestionsPool[this.currentLang];
       const indices = [];
@@ -1069,8 +1194,7 @@ class AffinityApp {
 
   startNewQuestion() {
     const langConfig = this.config[this.currentLang];
-    const activeQ = this.getActiveQuestions();
-    const totalQ = activeQ.length;
+    const totalQ = this.gameMode === 'quiz' ? this.getActiveQuestions().length : 10;
     const progressPercent = ((this.currentQuestionIdx) / totalQ) * 100;
 
     document.getElementById('progress-bar-fill').style.width = `${progressPercent || 5}%`;
@@ -1084,27 +1208,257 @@ class AffinityApp {
       : 0;
     document.getElementById('affinity-score-preview').textContent = langConfig.ui.scoreHeader.replace('{score}', currentScorePercent);
 
+    if (this.gameMode === 'quiz') {
+       document.getElementById('p1-question-text').classList.remove('hidden');
+       document.getElementById('p1-options').classList.remove('hidden');
+       document.getElementById('p1-blind-image-container').classList.add('hidden');
+       document.getElementById('p1-blind-options').classList.add('hidden');
+    }
+
     if (this.isMultiplayer) {
       this.showQuizStep('p1Turn');
 
-      // Ajusta o título do turno para online
       const badge = document.querySelector('#quiz-p1-turn .player-indicator');
-      badge.textContent = this.currentLang === 'pt' ? "Sua Escolha 🌐" : "Your Choice 🌐";
+      badge.textContent = langConfig.ui.mpYourChoice;
       badge.className = "player-indicator p1-badge";
 
-      document.getElementById('lbl-p1-tip').textContent = this.currentLang === 'pt'
-        ? "PENSA QUE NEM EUUUU PENSA QUE NEM EUUUUUU"
-        : "THINK LIKE MEEE THINK LIKE MEEEE";
+      document.getElementById('lbl-p1-tip').textContent = langConfig.ui.mpThinkTip;
 
-      this.renderMultiplayerQuestion();
+      if (this.gameMode === 'quiz') {
+        this.showBlindLiveRanking(false);
+        this.renderMultiplayerQuestion();
+      } else {
+        this.renderBlindRankMultiplayer();
+      }
     } else {
-      // Jogo Local Normal
       this.showQuizStep('p1Turn');
       const badge = document.querySelector('#quiz-p1-turn .player-indicator');
       badge.innerHTML = `Vez de <span class="p1-name-display">${this.p1Name}</span>`;
       badge.className = "player-indicator p1-badge";
       document.getElementById('lbl-p1-tip').textContent = langConfig.ui.p1Tip;
-      this.renderP1Question();
+      this.showBlindLiveRanking(false);
+
+      if (this.gameMode === 'quiz') {
+        this.renderP1Question();
+      } else {
+        // We only support blindRank multiplayer for now
+      }
+    }
+  }
+
+  // ==========================================
+  // BLIND RANKING LOGIC
+  // ==========================================
+  renderBlindRankMultiplayer() {
+    const item = this.blindRankingItems[this.currentQuestionIdx];
+    
+    // Hide quiz UI, show blind rank UI
+    document.getElementById('p1-question-text').classList.add('hidden');
+    document.getElementById('p1-options').classList.add('hidden');
+    document.getElementById('p1-blind-image-container').classList.remove('hidden');
+    document.getElementById('p1-blind-options').classList.remove('hidden');
+
+    const topicData = blindRankingTopics[this.currentLang][this.blindRankingTopic];
+    document.getElementById('blind-p1-topic-title').textContent = topicData.title;
+
+    const imgEl = document.getElementById('p1-blind-image');
+    imgEl.src = item.image;
+    // Corta o topo da imagem (título turco embutido) conforme a altura do texto.
+    imgEl.style.marginTop = `-${Math.round((item.crop != null ? item.crop : 0.25) * 100)}%`;
+    document.getElementById('p1-blind-name').textContent = this.getBlindItemName(item);
+
+    const container = document.getElementById('p1-blind-options');
+    container.innerHTML = "";
+
+    for (let i = 1; i <= 10; i++) {
+      const btn = document.createElement('button');
+      btn.className = "option-btn rank-btn";
+      btn.textContent = i;
+
+      if (this.blindAvailableSlots.includes(i)) {
+        btn.addEventListener('click', () => this.handleBlindRankSelection(i));
+      } else {
+        // Slot já preenchido: não pode ser selecionado
+        btn.classList.add('slot-taken');
+        btn.disabled = true;
+      }
+
+      container.appendChild(btn);
+    }
+
+    // Mostra o painel de ranking ao vivo e o atualiza
+    this.showBlindLiveRanking(true);
+    this.updateBlindLiveRanking();
+  }
+
+  // Resolve o nome do item no idioma atual (imagens são compartilhadas entre idiomas)
+  getBlindItemName(item) {
+    if (item && typeof item.idx === 'number' && this.blindRankingTopic !== null) {
+      const topic = blindRankingTopics[this.currentLang][this.blindRankingTopic];
+      if (topic && topic.items[item.idx]) {
+        return topic.items[item.idx].name;
+      }
+    }
+    return item ? item.name : "";
+  }
+
+  showBlindLiveRanking(show) {
+    const panel = document.getElementById('blind-live-ranking');
+    if (!panel) return;
+    panel.classList.toggle('hidden', !show);
+  }
+
+  updateBlindLiveRanking(highlightSlot) {
+    const list = document.getElementById('blind-live-list');
+    if (!list) return;
+
+    const titleEl = document.getElementById('lbl-live-ranking-title');
+    if (titleEl) titleEl.textContent = this.config[this.currentLang].ui.liveRankingTitle;
+
+    list.innerHTML = "";
+    for (let i = 0; i < 10; i++) {
+      const slotDiv = document.createElement('div');
+      slotDiv.className = 'live-rank-slot';
+
+      const rankNum = document.createElement('span');
+      rankNum.className = 'live-rank-num';
+      rankNum.textContent = i + 1;
+      slotDiv.appendChild(rankNum);
+
+      const entry = this.blindFinalRanking[i];
+      if (entry) {
+        slotDiv.classList.add('filled');
+        const img = document.createElement('img');
+        img.src = entry.image;
+        img.alt = this.getBlindItemName(entry);
+        img.className = 'live-rank-img';
+        slotDiv.appendChild(img);
+        if (i + 1 === highlightSlot) {
+          slotDiv.classList.add('highlight-slot');
+        }
+      } else {
+        const empty = document.createElement('span');
+        empty.className = 'live-rank-empty';
+        empty.textContent = "—";
+        slotDiv.appendChild(empty);
+      }
+      list.appendChild(slotDiv);
+    }
+  }
+
+  // Seletor de categoria (welcome screen)
+  renderCategoryPicker() {
+    const container = document.getElementById('category-options');
+    if (!container) return;
+
+    const topics = blindRankingTopics[this.currentLang];
+    if (this.selectedCategoryIdx >= topics.length) this.selectedCategoryIdx = 0;
+
+    container.innerHTML = "";
+    topics.forEach((topic, idx) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'category-chip' + (idx === this.selectedCategoryIdx ? ' active' : '');
+      chip.innerHTML = `<span class="category-emoji">${topic.emoji}</span><span class="category-label">${topic.title}</span>`;
+      chip.addEventListener('click', () => {
+        this.synth.playClickSound();
+        this.selectedCategoryIdx = idx;
+        [...container.children].forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      });
+      container.appendChild(chip);
+    });
+
+    const lbl = document.getElementById('lbl-category-title');
+    if (lbl) lbl.textContent = this.config[this.currentLang].ui.categoryTitle;
+  }
+
+  updateCategoryPickerVisibility() {
+    const picker = document.getElementById('blind-category-picker');
+    if (!picker) return;
+    picker.classList.toggle('hidden', this.gameMode !== 'blindRank');
+  }
+
+  handleBlindRankSelection(rankNumber) {
+    this.myChosenIdx = rankNumber;
+    this.synth.playTone(523.25, 'sine', 0.15, 0.1);
+
+    if (this.conn && this.conn.open) {
+      this.conn.send({
+        type: 'CHOICE',
+        choiceIdx: rankNumber
+      });
+    }
+
+    const container = document.getElementById('p1-blind-options');
+    container.innerHTML = `
+      <div class="mp-status-card" style="margin-top: 0px;">
+        <p class="mp-waiting-text">${this.config[this.currentLang].ui.lblMpWaitingChoice}</p>
+      </div>
+    `;
+
+    if (this.partnerChosenIdx !== null) {
+      this.revealMatchMultiplayer();
+    }
+  }
+
+  revealBlindRankMultiplayer() {
+    const langConfig = this.config[this.currentLang];
+    const item = this.blindRankingItems[this.currentQuestionIdx];
+    
+    document.getElementById('reveal-quiz-choices').classList.add('hidden');
+    document.getElementById('reveal-blind-container').classList.remove('hidden');
+
+    document.getElementById('lbl-blind-math').textContent = langConfig.ui.blindMathLabel;
+    document.getElementById('lbl-blind-slot').textContent = langConfig.ui.blindSlotLabel;
+
+    const revealIcon = document.getElementById('reveal-animation-container');
+    const revealTitle = document.getElementById('reveal-title');
+    const revealDesc = document.getElementById('reveal-desc');
+    const nextBtn = document.getElementById('btn-next-question');
+
+    let myChoice = this.myChosenIdx;
+    let partnerChoice = this.partnerChosenIdx;
+    
+    document.getElementById('blind-p1-rank').textContent = this.isHost ? myChoice : partnerChoice;
+    document.getElementById('blind-p2-rank').textContent = this.isHost ? partnerChoice : myChoice;
+    
+    let avg = (myChoice + partnerChoice) / 2;
+    document.getElementById('blind-avg').textContent = avg;
+
+    let closestSlot = this.blindAvailableSlots.reduce((prev, curr) => {
+      const diffCurr = Math.abs(curr - avg);
+      const diffPrev = Math.abs(prev - avg);
+      if (diffCurr < diffPrev) return curr;
+      if (diffCurr === diffPrev) return curr < prev ? curr : prev;
+      return prev;
+    });
+
+    document.getElementById('blind-final-slot').textContent = closestSlot;
+
+    this.blindFinalRanking[closestSlot - 1] = item;
+    this.blindAvailableSlots = this.blindAvailableSlots.filter(s => s !== closestSlot);
+
+    // Atualiza o painel de ranking ao vivo (substitui o mini-board da revelação)
+    this.updateBlindLiveRanking(closestSlot);
+
+    revealIcon.textContent = "⭐";
+    revealIcon.className = "reveal-status-icon bounce-animation";
+    revealTitle.innerHTML = `Rank #${closestSlot}`;
+    revealDesc.textContent = langConfig.ui.blindRevealDesc;
+
+    this.synth.playMatchSound();
+
+    const isLastQ = this.currentQuestionIdx === 9;
+    if (this.isHost) {
+      nextBtn.classList.remove('hidden');
+      nextBtn.textContent = isLastQ ? langConfig.ui.btnFinish : langConfig.ui.btnNext;
+      nextBtn.disabled = false;
+    } else {
+      nextBtn.classList.remove('hidden');
+      nextBtn.textContent = langConfig.ui.lblMpWaitingNext;
+      nextBtn.disabled = true;
+      nextBtn.style.opacity = '0.6';
     }
   }
 
@@ -1200,6 +1554,15 @@ class AffinityApp {
   revealMatchMultiplayer() {
     this.showQuizStep('reveal');
     const langConfig = this.config[this.currentLang];
+
+    if (this.gameMode === 'blindRank') {
+      this.revealBlindRankMultiplayer();
+      return;
+    }
+
+    document.getElementById('reveal-quiz-choices').classList.remove('hidden');
+    document.getElementById('reveal-blind-container').classList.add('hidden');
+
     const q = this.getActiveQuestions()[this.currentQuestionIdx];
 
     // Mapeia quem escolheu o quê
@@ -1296,7 +1659,9 @@ class AffinityApp {
     nextBtn.disabled = false;
     nextBtn.style.opacity = '1.0';
 
-    if (this.currentQuestionIdx < this.getActiveQuestions().length) {
+    const totalQ = this.gameMode === 'quiz' ? this.getActiveQuestions().length : 10;
+
+    if (this.currentQuestionIdx < totalQ) {
       this.startNewQuestion();
     } else {
       this.goToResults();
@@ -1382,6 +1747,38 @@ class AffinityApp {
   goToResults() {
     this.switchScreen('results');
     this.synth.playFanfareSound();
+    this.showBlindLiveRanking(false);
+
+    if (this.gameMode === 'blindRank') {
+      document.getElementById('results-quiz-container').classList.add('hidden');
+      document.getElementById('results-blind-container').classList.remove('hidden');
+      document.getElementById('lbl-ranking-final-title').textContent = this.config[this.currentLang].ui.rankingFinalTitle;
+      // No Blind Ranking, o botão final volta ao lobby em vez de "refazer".
+      document.getElementById('btn-restart').textContent = this.config[this.currentLang].ui.btnBackToLobby;
+
+      const boardContainer = document.getElementById('ranking-board-full-list');
+      boardContainer.innerHTML = "";
+      for (let i = 0; i < 10; i++) {
+        const slotDiv = document.createElement('div');
+        slotDiv.className = 'ranking-slot-full';
+        const rankNum = document.createElement('span');
+        rankNum.className = 'rank-num-full';
+        rankNum.textContent = `#${i + 1}`;
+        slotDiv.appendChild(rankNum);
+        
+        if (this.blindFinalRanking[i]) {
+          const img = document.createElement('img');
+          img.src = this.blindFinalRanking[i].image;
+          img.className = 'rank-img-full';
+          slotDiv.appendChild(img);
+        }
+        boardContainer.appendChild(slotDiv);
+      }
+      return;
+    }
+
+    document.getElementById('results-quiz-container').classList.remove('hidden');
+    document.getElementById('results-blind-container').classList.add('hidden');
 
     const langConfig = this.config[this.currentLang];
     const totalQ = this.getActiveQuestions().length;
@@ -1551,6 +1948,55 @@ class AffinityApp {
 
     this.switchScreen('quiz');
     this.startNewQuestion();
+  }
+
+  // Volta ambos os jogadores ao lobby conectado (sem derrubar a conexão),
+  // permitindo escolher outra categoria e jogar novamente.
+  returnToLobby() {
+    const langConfig = this.config[this.currentLang];
+
+    // Reseta estado de jogo
+    this.currentQuestionIdx = 0;
+    this.p1Answers = [];
+    this.p2Answers = [];
+    this.matchesCount = 0;
+    this.myChosenIdx = null;
+    this.partnerChosenIdx = null;
+    this.blindFinalRanking = new Array(10).fill(null);
+    this.blindAvailableSlots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+    const nextBtn = document.getElementById('btn-next-question');
+    nextBtn.disabled = false;
+    nextBtn.style.opacity = '1.0';
+
+    this.showBlindLiveRanking(false);
+    this.switchScreen('welcome');
+
+    // Reexibe o painel multiplayer no estado "conectado"
+    document.getElementById('play-mode-selection').classList.add('hidden');
+    document.getElementById('multiplayer-panel').classList.remove('hidden');
+    document.getElementById('mp-lobby-actions').classList.add('hidden');
+
+    if (this.isHost) {
+      document.getElementById('mp-guest-block').classList.add('hidden');
+      document.getElementById('mp-host-block').classList.remove('hidden');
+      document.getElementById('lbl-mp-waiting-partner').classList.add('hidden');
+      document.getElementById('mp-host-start-container').classList.remove('hidden');
+    } else {
+      document.getElementById('mp-host-block').classList.add('hidden');
+      const guestBlock = document.getElementById('mp-guest-block');
+      guestBlock.classList.remove('hidden');
+      guestBlock.innerHTML = `
+        <div class="mp-status-card">
+          <p class="mp-success-text">${langConfig.ui.lblMpConnected}</p>
+          <p class="mp-waiting-text">${langConfig.ui.lblMpWaitingHost}</p>
+        </div>
+      `;
+    }
+
+    // O seletor de categoria reflete o modo atual (Blind Ranking)
+    this.updateCategoryPickerVisibility();
+    this.renderCategoryPicker();
   }
 }
 

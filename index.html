@@ -127,8 +127,16 @@
     </button>
   </div>
 
+  <!-- Painel de Ranking ao Vivo (Blind Ranking) -->
+  <aside id="blind-live-ranking" class="blind-live-ranking hidden" aria-live="polite">
+    <h4 class="live-ranking-title" id="lbl-live-ranking-title">Ranking Atual</h4>
+    <div id="blind-live-list" class="live-ranking-list">
+      <!-- Gerado dinamicamente -->
+    </div>
+  </aside>
+
   <main class="app-container">
-    
+
     <!-- TELA 1: WELCOME / CONFIGURAÇÃO -->
     <section id="screen-welcome" class="screen active">
       <div class="card glassmorphic welcome-card">
@@ -165,6 +173,30 @@
             <label for="player1-name" id="lbl-player1-name">Seu Nome (Amor) 💖</label>
             <input type="text" id="player1-name" required placeholder="Digite seu nome..." autocomplete="off">
           </div>
+
+          <!-- Escolha do Jogo -->
+          <div class="input-group" id="game-mode-selection">
+            <label id="lbl-game-mode-title">Escolha o Jogo:</label>
+            <div class="game-mode-options">
+              <div class="mode-option active" data-mode="quiz" id="mode-quiz-btn">
+                <span class="mode-icon">❤️</span>
+                <span class="mode-name" id="lbl-mode-quiz">Afinidade</span>
+              </div>
+              <div class="mode-option" data-mode="blindRank" id="mode-blind-btn">
+                <span class="mode-icon">🙈</span>
+                <span class="mode-name" id="lbl-mode-blind">Blind Ranking</span>
+              </div>
+            </div>
+
+            <!-- Seletor de Categoria (apenas Blind Ranking) -->
+            <div id="blind-category-picker" class="blind-category-picker hidden">
+              <label class="category-picker-label" id="lbl-category-title">Escolha a Categoria:</label>
+              <div id="category-options" class="category-options">
+                <!-- Gerado dinamicamente -->
+              </div>
+            </div>
+          </div>
+          
           
           <!-- Escolha do Modo de Jogo -->
           <div id="play-mode-selection" class="welcome-actions">
@@ -249,9 +281,22 @@
         </div>
         <div class="player-indicator p1-badge">Vez de <span class="p1-name-display">Amor 1</span></div>
         <p class="quiz-tip" id="lbl-p1-tip">Esconda a tela do seu amor e faça sua escolha!</p>
+        
+        <div id="p1-blind-image-container" class="blind-image-container hidden">
+          <h2 id="blind-p1-topic-title" class="question-text" style="margin-top:0; margin-bottom: 15px;"></h2>
+          <div class="blind-image-frame">
+            <img id="p1-blind-image" src="" alt="Blind Item">
+          </div>
+          <h3 id="p1-blind-name" class="blind-item-name">Item Name</h3>
+        </div>
+
         <h2 id="p1-question-text" class="question-text">Pergunta...</h2>
         <div id="p1-options" class="options-grid">
           <!-- Gerado dinamicamente -->
+        </div>
+        
+        <div id="p1-blind-options" class="blind-options-grid hidden">
+          <!-- Botões 1 a 10 gerados dinamicamente -->
         </div>
       </div>
 
@@ -304,9 +349,21 @@
         </div>
         <div class="player-indicator p2-badge">Vez de <span class="p2-name-display">Amor 2</span></div>
         <p class="quiz-tip" id="lbl-p2-tip">Agora é com você! O que você acha que descreve melhor vocês?</p>
+        
+        <div id="p2-blind-image-container" class="blind-image-container hidden">
+          <div class="blind-image-frame">
+            <img id="p2-blind-image" src="" alt="Blind Item">
+          </div>
+          <h3 id="p2-blind-name" class="blind-item-name">Item Name</h3>
+        </div>
+
         <h2 id="p2-question-text" class="question-text">Pergunta...</h2>
         <div id="p2-options" class="options-grid">
           <!-- Gerado dinamicamente -->
+        </div>
+
+        <div id="p2-blind-options" class="blind-options-grid hidden">
+          <!-- Botões 1 a 10 gerados dinamicamente -->
         </div>
       </div>
 
@@ -337,7 +394,7 @@
         <h2 id="reveal-title">Processando...</h2>
         <p id="reveal-desc" class="reveal-desc">Sincronizando as respostas do casal...</p>
         
-        <div class="reveal-choices-container">
+        <div class="reveal-choices-container" id="reveal-quiz-choices">
           <div class="reveal-choice-box p1-choice-box">
             <span class="choice-owner p1-name-display">Amor 1</span>
             <div id="reveal-p1-choice-text" class="choice-text">Carregando...</div>
@@ -345,6 +402,22 @@
           <div class="reveal-choice-box p2-choice-box">
             <span class="choice-owner p2-name-display">Amor 2</span>
             <div id="reveal-p2-choice-text" class="choice-text">Carregando...</div>
+          </div>
+        </div>
+
+        <div id="reveal-blind-container" class="hidden blind-reveal-container">
+          <div class="blind-reveal-stats">
+            <div class="stat-box p1-badge">
+              <span class="stat-label p1-name-display">Amor 1</span>
+              <span id="blind-p1-rank" class="stat-value">?</span>
+            </div>
+            <div class="stat-box p2-badge">
+              <span class="stat-label p2-name-display">Amor 2</span>
+              <span id="blind-p2-rank" class="stat-value">?</span>
+            </div>
+          </div>
+          <div class="blind-reveal-math">
+            <span id="lbl-blind-math">Média:</span> <strong id="blind-avg">?</strong> ➡️ <span id="lbl-blind-slot">Slot:</span> <strong id="blind-final-slot">?</strong>
           </div>
         </div>
 
@@ -375,25 +448,36 @@
           <p class="results-subtitle" id="lbl-results-subtitle">Parabéns ao Casal!</p>
         </div>
 
-        <div class="score-circle-container">
-          <svg class="score-svg" viewBox="0 0 100 100">
-            <defs>
-              <linearGradient id="score-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#ec4899" />
-                <stop offset="100%" stop-color="#f43f5e" />
-              </linearGradient>
-            </defs>
-            <circle class="score-circle-bg" cx="50" cy="50" r="45"/>
-            <circle id="score-circle-fill" class="score-circle-fill" cx="50" cy="50" r="45" stroke-dasharray="283" stroke-dashoffset="283"/>
-          </svg>
-          <div class="score-display">
-            <span id="score-percentage">0%</span>
-            <span class="score-label" id="lbl-results-sync-label">Sintonia</span>
+        <div id="results-quiz-container">
+          <div class="score-circle-container">
+            <svg class="score-svg" viewBox="0 0 100 100">
+              <defs>
+                <linearGradient id="score-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#ec4899" />
+                  <stop offset="100%" stop-color="#f43f5e" />
+                </linearGradient>
+              </defs>
+              <circle class="score-circle-bg" cx="50" cy="50" r="45"/>
+              <circle id="score-circle-fill" class="score-circle-fill" cx="50" cy="50" r="45" stroke-dasharray="283" stroke-dashoffset="283"/>
+            </svg>
+            <div class="score-display">
+              <span id="score-percentage">0%</span>
+              <span class="score-label" id="lbl-results-sync-label">Sintonia</span>
+            </div>
           </div>
+
+          <h2 id="affinity-rank-title" class="affinity-rank-title">Almas Gêmeas 💖</h2>
+          <p id="affinity-rank-desc" class="affinity-rank-desc">Carregando avaliação...</p>
         </div>
 
-        <h2 id="affinity-rank-title" class="affinity-rank-title">Almas Gêmeas 💖</h2>
-        <p id="affinity-rank-desc" class="affinity-rank-desc">Carregando avaliação...</p>
+        <div id="results-blind-container" class="hidden">
+          <div class="ranking-board-full">
+            <h3 class="ranking-title" id="lbl-ranking-final-title">Ranking Final</h3>
+            <div id="ranking-board-full-list" class="ranking-list">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
 
         <div class="results-actions">
           <button id="btn-restart" class="btn btn-primary btn-pulse">
@@ -434,8 +518,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="config.js"></script>
-  <script src="questions.js"></script>
-  <script src="app.js"></script>
+  <script src="config.js?v=2"></script>
+  <script src="questions.js?v=2"></script>
+  <script src="blind_ranking.js?v=2"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>
