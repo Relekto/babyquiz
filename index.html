@@ -186,6 +186,10 @@
                 <span class="mode-icon">🙈</span>
                 <span class="mode-name" id="lbl-mode-blind">Blind Ranking</span>
               </div>
+              <div class="mode-option" data-mode="duoBattle" id="mode-battle-btn">
+                <span class="mode-icon">⚔️</span>
+                <span class="mode-name" id="lbl-mode-battle">Duo Battle</span>
+              </div>
             </div>
 
             <!-- Seletor de Categoria (apenas Blind Ranking) -->
@@ -246,6 +250,32 @@
 
     <!-- TELA 2: QUIZ / TURNO DO PLAYER 1 E PLAYER 2 -->
     <section id="screen-quiz" class="screen">
+
+      <!-- HUD de Batalha (Duo Battle) -->
+      <div id="battle-hud" class="battle-hud hidden">
+        <div class="battle-side battle-enemy">
+          <div class="battle-avatar" id="battle-enemy-avatar">👹</div>
+          <div class="battle-bar-wrap">
+            <div class="battle-name" id="battle-enemy-name">Demon King</div>
+            <div class="hp-bar-bg enemy-hp">
+              <div class="hp-bar-fill" id="battle-enemy-hp-fill"></div>
+              <span class="hp-bar-text" id="battle-enemy-hp-text">120/120</span>
+            </div>
+          </div>
+        </div>
+        <div class="battle-vs">⚔️</div>
+        <div class="battle-side battle-couple">
+          <div class="battle-bar-wrap">
+            <div class="battle-name" id="battle-couple-name">💞 Us</div>
+            <div class="hp-bar-bg couple-hp">
+              <div class="hp-bar-fill" id="battle-couple-hp-fill"></div>
+              <span class="hp-bar-text" id="battle-couple-hp-text">100/100</span>
+            </div>
+          </div>
+          <div class="battle-avatar" id="battle-couple-avatar">💞</div>
+        </div>
+      </div>
+
       <div class="quiz-progress-container">
         <div class="progress-info">
           <span id="question-number">Questão 1 de 10</span>
@@ -479,6 +509,22 @@
           </div>
         </div>
 
+        <div id="results-battle-container" class="hidden">
+          <div id="battle-result-icon" class="battle-result-icon">🏆</div>
+          <h2 id="battle-result-title" class="affinity-rank-title">Victory!</h2>
+          <p id="battle-result-desc" class="affinity-rank-desc">Carregando...</p>
+          <div class="battle-result-stats">
+            <div class="stat-box">
+              <span class="stat-label" id="lbl-battle-rounds">Rodadas</span>
+              <span class="stat-value" id="battle-stat-rounds">0</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label" id="lbl-battle-hits">Acertos</span>
+              <span class="stat-value" id="battle-stat-hits">0</span>
+            </div>
+          </div>
+        </div>
+
         <div class="results-actions">
           <button id="btn-restart" class="btn btn-primary btn-pulse">
             Refazer Teste 🔄
@@ -518,9 +564,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="config.js?v=2"></script>
-  <script src="questions.js?v=2"></script>
-  <script src="blind_ranking.js?v=2"></script>
-  <script src="app.js?v=2"></script>
+  <script src="config.js?v=3"></script>
+  <script src="questions.js?v=3"></script>
+  <script src="blind_ranking.js?v=3"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

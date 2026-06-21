@@ -75,7 +75,28 @@ const coupleConfig = {
       resultsTitle: "Resultados do teste de afinidadeee ",
       resultsSubtitle: "PARABÉNSSSSSSS",
       resultsSyncLabel: "Em Sintonia",
-      btnRestart: "Refazer Teste 🔄"
+      btnRestart: "Refazer Teste 🔄",
+
+      // Duo Battle
+      modeBattle: "Duo Battle",
+      battleTip: "Escolham IGUAL para atacar o chefe! 🗡️",
+      battleEnemyName: "Rei Demônio 👹",
+      battleCoupleName: "💞 Nós Dois",
+      battleHitTitle: "ACERTO CRÍTICO! -{dmg} ❤️ do chefe ⚔️",
+      battleHitDesc: "Vocês pensaram igual e atacaram juntinhos!",
+      battleMissTitle: "O chefe contra-atacou! -{dmg} ❤️ 💥",
+      battleMissDesc: "Respostas diferentes deixaram vocês na defensiva...",
+      battleNext: "Próximo Ataque ⚔️",
+      battleRoundsLabel: "Rodadas",
+      battleHitsLabel: "Acertos",
+      victoryTitle: "VITÓRIA! 🏆",
+      victoryDesc: "Vocês derrotaram o Rei Demônio com o poder da sintonia! 💖",
+      defeatTitle: "Derrota... 💀",
+      defeatDesc: "O chefe venceu dessa vez. Conheçam-se melhor e tentem a revanche! 🔁",
+      victoryResultsTitle: "Chefe Derrotado!",
+      victoryResultsSubtitle: "Que dupla! 💞",
+      defeatResultsTitle: "Fim de Jogo",
+      defeatResultsSubtitle: "Revanche? ⚔️"
     },
 
     // Títulos de afinidade
@@ -182,7 +203,28 @@ const coupleConfig = {
       resultsTitle: "Affinity test resultsss ",
       resultsSubtitle: "CONGRATZZZZZZZ",
       resultsSyncLabel: "In Sync",
-      btnRestart: "Retake Test 🔄"
+      btnRestart: "Retake Test 🔄",
+
+      // Duo Battle
+      modeBattle: "Duo Battle",
+      battleTip: "Match your answers to attack the boss! 🗡️",
+      battleEnemyName: "Demon King 👹",
+      battleCoupleName: "💞 Us",
+      battleHitTitle: "CRITICAL HIT! -{dmg} boss ❤️ ⚔️",
+      battleHitDesc: "You thought alike and struck together!",
+      battleMissTitle: "The boss struck back! -{dmg} ❤️ 💥",
+      battleMissDesc: "Different answers left you off-guard...",
+      battleNext: "Next Attack ⚔️",
+      battleRoundsLabel: "Rounds",
+      battleHitsLabel: "Hits",
+      victoryTitle: "VICTORY! 🏆",
+      victoryDesc: "You defeated the Demon King with the power of being in sync! 💖",
+      defeatTitle: "Defeat... 💀",
+      defeatDesc: "The boss won this time. Get to know each other better and rematch! 🔁",
+      victoryResultsTitle: "Boss Defeated!",
+      victoryResultsSubtitle: "What a duo! 💞",
+      defeatResultsTitle: "Game Over",
+      defeatResultsSubtitle: "Rematch? ⚔️"
     },
 
     // Affinity Titles in English

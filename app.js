@@ -366,6 +366,18 @@ class AffinityApp {
     this.blindFinalRanking = new Array(10).fill(null);
     this.blindAvailableSlots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
+    // Estado Duo Battle (Boss Fight)
+    // Tuning: 6 acertos derrubam o chefe, 5 erros derrubam o casal.
+    this.BATTLE = { enemyMaxHp: 120, coupleMaxHp: 100, hitDamage: 20, enemyDamage: 20, questionCount: 40 };
+    this.enemyMaxHp = this.BATTLE.enemyMaxHp;
+    this.enemyHp = this.BATTLE.enemyMaxHp;
+    this.coupleMaxHp = this.BATTLE.coupleMaxHp;
+    this.coupleHp = this.BATTLE.coupleMaxHp;
+    this.battleOver = false;
+    this.battleWon = false;
+    this.battleRounds = 0;
+    this.battleHits = 0;
+
     // Estado do Multiplayer P2P
     this.isMultiplayer = false;
     this.isHost = false;
@@ -421,25 +433,18 @@ class AffinityApp {
 
   setupEventListeners() {
     // Game Mode Selection
-    const btnQuiz = document.getElementById('mode-quiz-btn');
-    const btnBlind = document.getElementById('mode-blind-btn');
-    if (btnQuiz && btnBlind) {
-      btnQuiz.addEventListener('click', () => {
+    const modeButtons = {
+      quiz: document.getElementById('mode-quiz-btn'),
+      blindRank: document.getElementById('mode-blind-btn'),
+      duoBattle: document.getElementById('mode-battle-btn')
+    };
+    Object.entries(modeButtons).forEach(([mode, btn]) => {
+      if (!btn) return;
+      btn.addEventListener('click', () => {
         this.synth.playClickSound();
-        this.gameMode = 'quiz';
-        btnQuiz.classList.add('active');
-        btnBlind.classList.remove('active');
-        this.updateCategoryPickerVisibility();
+        this.setGameMode(mode);
       });
-      btnBlind.addEventListener('click', () => {
-        this.synth.playClickSound();
-        this.gameMode = 'blindRank';
-        btnBlind.classList.add('active');
-        btnQuiz.classList.remove('active');
-        this.updateCategoryPickerVisibility();
-        this.renderCategoryPicker();
-      });
-    }
+    });
 
     // Renderiza o seletor de categoria inicial
     this.renderCategoryPicker();
@@ -571,21 +576,15 @@ class AffinityApp {
     document.getElementById('btn-host-start').addEventListener('click', () => {
       this.synth.playClickSound();
       if (this.conn && this.conn.open) {
-        if (this.gameMode === 'quiz') {
-          const pool = coupleQuestionsPool[this.currentLang];
-          const indices = [];
-          while (indices.length < Math.min(10, pool.length)) {
-            const idx = Math.floor(Math.random() * pool.length);
-            if (!indices.includes(idx)) {
-              indices.push(idx);
-            }
-          }
+        if (this.gameMode === 'quiz' || this.gameMode === 'duoBattle') {
+          const count = this.gameMode === 'duoBattle' ? this.BATTLE.questionCount : 10;
+          const indices = this.pickQuestionIndices(count);
           this.activeQuestionsIndices = indices;
           const subjects = indices.map(() => Math.random() < 0.5 ? 'p1' : 'p2');
           this.activeQuestionsSubjects = subjects;
           this.conn.send({
             type: 'START_GAME',
-            gameMode: 'quiz',
+            gameMode: this.gameMode,
             p1Name: this.p1Name,
             p2Name: this.p2Name,
             questionIndices: indices,
@@ -629,6 +628,20 @@ class AffinityApp {
           this.conn.send({ type: 'NEXT_QUESTION' });
           this.nextQuestionMultiplayer();
         }
+      } else if (this.gameMode === 'duoBattle') {
+        if (this.battleOver) {
+          this.goToResults();
+        } else {
+          this.currentQuestionIdx++;
+          if (this.currentQuestionIdx < this.getActiveQuestions().length) {
+            this.startNewQuestion();
+          } else {
+            // Sem perguntas restantes: decide pelo HP atual.
+            this.battleOver = true;
+            this.battleWon = this.enemyHp <= this.coupleHp;
+            this.goToResults();
+          }
+        }
       } else {
         this.currentQuestionIdx++;
         if (this.currentQuestionIdx < this.getActiveQuestions().length) {
@@ -655,14 +668,8 @@ class AffinityApp {
 
       if (this.isMultiplayer) {
         if (this.isHost && this.conn && this.conn.open) {
-          const pool = coupleQuestionsPool[this.currentLang];
-          const indices = [];
-          while (indices.length < Math.min(10, pool.length)) {
-            const idx = Math.floor(Math.random() * pool.length);
-            if (!indices.includes(idx)) {
-              indices.push(idx);
-            }
-          }
+          const count = this.gameMode === 'duoBattle' ? this.BATTLE.questionCount : 10;
+          const indices = this.pickQuestionIndices(count);
           this.activeQuestionsIndices = indices;
 
           // Gera aleatoriamente o sujeito da pergunta ('p1' ou 'p2')
@@ -716,12 +723,20 @@ class AffinityApp {
           : 0;
         document.getElementById('affinity-score-preview').textContent = langConfig.ui.scoreHeader.replace('{score}', currentScorePercent);
 
+        if (this.gameMode === 'duoBattle') this.renderBattleHud();
+
         if (this.isMultiplayer) {
           if (this.gameMode === 'blindRank') {
             // Blind ranking: updateLanguage() already refreshed the topic title,
             // item name and reveal text. Just refresh the live ranking board.
             // Re-rendering options here would wipe an already-made selection.
             this.updateBlindLiveRanking();
+          } else if (this.gameMode === 'duoBattle') {
+            // Só re-renderiza a pergunta se ainda estiver escolhendo (sem escolha feita),
+            // para nunca reexecutar applyBattleOutcome e duplicar o dano.
+            if (this.quizSteps.p1Turn.classList.contains('active') && this.myChosenIdx === null) {
+              this.renderMultiplayerQuestion();
+            }
           } else {
             this.renderMultiplayerQuestion();
           }
@@ -731,10 +746,15 @@ class AffinityApp {
           } else if (this.quizSteps.p2Turn.classList.contains('active')) {
             this.renderP2Question();
           } else if (this.quizSteps.reveal.classList.contains('active')) {
-            this.revealMatch();
+            // Em batalha, não reexecutamos revealMatch (reaplicaria dano).
+            if (this.gameMode !== 'duoBattle') this.revealMatch();
           }
         }
       } else if (this.screens.results.classList.contains('active')) {
+        if (this.gameMode === 'duoBattle') {
+          this.renderBattleResults(true); // re-traduz textos sem repetir efeitos
+          return;
+        }
         const langConfig = this.config[this.currentLang];
         const totalQ = this.getActiveQuestions().length;
         const finalPercent = Math.round((this.matchesCount / totalQ) * 100);
@@ -931,7 +951,7 @@ class AffinityApp {
         this.p1Name = data.p1Name;
         this.p2Name = data.p2Name;
         this.gameMode = data.gameMode || 'quiz';
-        if (this.gameMode === 'quiz') {
+        if (this.gameMode === 'quiz' || this.gameMode === 'duoBattle') {
           this.activeQuestionsIndices = data.questionIndices;
           this.activeQuestionsSubjects = data.questionSubjects || [];
         } else {
@@ -1053,6 +1073,8 @@ class AffinityApp {
     document.getElementById('lbl-game-mode-title').textContent = langConfig.ui.gameModeTitle;
     document.getElementById('lbl-mode-quiz').textContent = langConfig.ui.modeQuiz;
     document.getElementById('lbl-mode-blind').textContent = langConfig.ui.modeBlind;
+    const lblModeBattle = document.getElementById('lbl-mode-battle');
+    if (lblModeBattle) lblModeBattle.textContent = langConfig.ui.modeBattle;
     document.getElementById('lbl-category-title').textContent = langConfig.ui.categoryTitle;
     this.renderCategoryPicker();
 
@@ -1175,15 +1197,13 @@ class AffinityApp {
       this.blindAvailableSlots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     }
 
+    if (this.gameMode === 'duoBattle') {
+      this.initBattle();
+    }
+
     if (!this.isMultiplayer) {
-      const pool = coupleQuestionsPool[this.currentLang];
-      const indices = [];
-      while (indices.length < Math.min(10, pool.length)) {
-        const idx = Math.floor(Math.random() * pool.length);
-        if (!indices.includes(idx)) {
-          indices.push(idx);
-        }
-      }
+      const count = this.gameMode === 'duoBattle' ? this.BATTLE.questionCount : 10;
+      const indices = this.pickQuestionIndices(count);
       this.activeQuestionsIndices = indices;
       this.activeQuestionsSubjects = indices.map(() => Math.random() < 0.5 ? 'p1' : 'p2');
     }
@@ -1194,7 +1214,8 @@ class AffinityApp {
 
   startNewQuestion() {
     const langConfig = this.config[this.currentLang];
-    const totalQ = this.gameMode === 'quiz' ? this.getActiveQuestions().length : 10;
+    const isBattle = this.gameMode === 'duoBattle';
+    const totalQ = this.gameMode === 'blindRank' ? 10 : this.getActiveQuestions().length;
     const progressPercent = ((this.currentQuestionIdx) / totalQ) * 100;
 
     document.getElementById('progress-bar-fill').style.width = `${progressPercent || 5}%`;
@@ -1208,7 +1229,14 @@ class AffinityApp {
       : 0;
     document.getElementById('affinity-score-preview').textContent = langConfig.ui.scoreHeader.replace('{score}', currentScorePercent);
 
-    if (this.gameMode === 'quiz') {
+    // Alterna entre o cabeçalho de progresso (quiz/blind) e o HUD de batalha.
+    const progEl = document.querySelector('.quiz-progress-container');
+    if (progEl) progEl.classList.toggle('hidden', isBattle);
+    const hudEl = document.getElementById('battle-hud');
+    if (hudEl) hudEl.classList.toggle('hidden', !isBattle);
+    if (isBattle) this.renderBattleHud();
+
+    if (this.gameMode === 'quiz' || isBattle) {
        document.getElementById('p1-question-text').classList.remove('hidden');
        document.getElementById('p1-options').classList.remove('hidden');
        document.getElementById('p1-blind-image-container').classList.add('hidden');
@@ -1222,9 +1250,10 @@ class AffinityApp {
       badge.textContent = langConfig.ui.mpYourChoice;
       badge.className = "player-indicator p1-badge";
 
-      document.getElementById('lbl-p1-tip').textContent = langConfig.ui.mpThinkTip;
+      document.getElementById('lbl-p1-tip').textContent = isBattle ? langConfig.ui.battleTip : langConfig.ui.mpThinkTip;
+      if (isBattle) badge.textContent = langConfig.ui.modeBattle;
 
-      if (this.gameMode === 'quiz') {
+      if (this.gameMode === 'quiz' || isBattle) {
         this.showBlindLiveRanking(false);
         this.renderMultiplayerQuestion();
       } else {
@@ -1233,12 +1262,14 @@ class AffinityApp {
     } else {
       this.showQuizStep('p1Turn');
       const badge = document.querySelector('#quiz-p1-turn .player-indicator');
-      badge.innerHTML = `Vez de <span class="p1-name-display">${this.p1Name}</span>`;
+      badge.innerHTML = isBattle
+        ? langConfig.ui.modeBattle
+        : `Vez de <span class="p1-name-display">${this.p1Name}</span>`;
       badge.className = "player-indicator p1-badge";
-      document.getElementById('lbl-p1-tip').textContent = langConfig.ui.p1Tip;
+      document.getElementById('lbl-p1-tip').textContent = isBattle ? langConfig.ui.battleTip : langConfig.ui.p1Tip;
       this.showBlindLiveRanking(false);
 
-      if (this.gameMode === 'quiz') {
+      if (this.gameMode === 'quiz' || isBattle) {
         this.renderP1Question();
       } else {
         // We only support blindRank multiplayer for now
@@ -1262,10 +1293,23 @@ class AffinityApp {
     document.getElementById('blind-p1-topic-title').textContent = topicData.title;
 
     const imgEl = document.getElementById('p1-blind-image');
-    imgEl.src = item.image;
-    // Corta o topo da imagem (título turco embutido) conforme a altura do texto.
-    imgEl.style.marginTop = `-${Math.round((item.crop != null ? item.crop : 0.25) * 100)}%`;
-    document.getElementById('p1-blind-name').textContent = this.getBlindItemName(item);
+    const frame = imgEl.closest('.blind-image-frame');
+    const nameEl = document.getElementById('p1-blind-name');
+
+    if (item.image) {
+      // Imagem (com ou sem rótulo). Corta o topo (título turco embutido).
+      if (frame) frame.style.display = '';
+      imgEl.src = item.image;
+      imgEl.style.marginTop = `-${Math.round((item.crop != null ? item.crop : 0.25) * 100)}%`;
+    } else if (frame) {
+      // Categoria só-texto: sem imagem.
+      frame.style.display = 'none';
+    }
+
+    const itemName = this.getBlindItemName(item);
+    nameEl.textContent = itemName;
+    nameEl.style.display = itemName ? '' : 'none';        // imgnolabel: sem rótulo
+    nameEl.classList.toggle('text-item-big', !item.image); // texto puro: maior
 
     const container = document.getElementById('p1-blind-options');
     container.innerHTML = "";
@@ -1328,11 +1372,19 @@ class AffinityApp {
       const entry = this.blindFinalRanking[i];
       if (entry) {
         slotDiv.classList.add('filled');
-        const img = document.createElement('img');
-        img.src = entry.image;
-        img.alt = this.getBlindItemName(entry);
-        img.className = 'live-rank-img';
-        slotDiv.appendChild(img);
+        if (entry.image) {
+          const img = document.createElement('img');
+          img.src = entry.image;
+          img.alt = this.getBlindItemName(entry);
+          img.className = 'live-rank-img';
+          slotDiv.appendChild(img);
+        } else {
+          // Categoria só-texto: mostra um rótulo curto no slot.
+          const txt = document.createElement('span');
+          txt.className = 'live-rank-text';
+          txt.textContent = this.getBlindItemName(entry);
+          slotDiv.appendChild(txt);
+        }
         if (i + 1 === highlightSlot) {
           slotDiv.classList.add('highlight-slot');
         }
@@ -1377,6 +1429,138 @@ class AffinityApp {
     const picker = document.getElementById('blind-category-picker');
     if (!picker) return;
     picker.classList.toggle('hidden', this.gameMode !== 'blindRank');
+  }
+
+  // ==========================================
+  // DUO BATTLE (BOSS FIGHT)
+  // ==========================================
+  setGameMode(mode) {
+    this.gameMode = mode;
+    const ids = { quiz: 'mode-quiz-btn', blindRank: 'mode-blind-btn', duoBattle: 'mode-battle-btn' };
+    Object.entries(ids).forEach(([m, id]) => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('active', m === mode);
+    });
+    this.updateCategoryPickerVisibility();
+    if (mode === 'blindRank') this.renderCategoryPicker();
+  }
+
+  // Sorteia índices de perguntas únicas do pool atual.
+  pickQuestionIndices(count) {
+    const pool = coupleQuestionsPool[this.currentLang];
+    const n = Math.min(count, pool.length);
+    const indices = [];
+    while (indices.length < n) {
+      const idx = Math.floor(Math.random() * pool.length);
+      if (!indices.includes(idx)) indices.push(idx);
+    }
+    return indices;
+  }
+
+  initBattle() {
+    this.enemyMaxHp = this.BATTLE.enemyMaxHp;
+    this.enemyHp = this.BATTLE.enemyMaxHp;
+    this.coupleMaxHp = this.BATTLE.coupleMaxHp;
+    this.coupleHp = this.BATTLE.coupleMaxHp;
+    this.battleOver = false;
+    this.battleWon = false;
+    this.battleRounds = 0;
+    this.battleHits = 0;
+  }
+
+  renderBattleHud() {
+    const langConfig = this.config[this.currentLang];
+    const enemyPct = Math.max(0, Math.round((this.enemyHp / this.enemyMaxHp) * 100));
+    const couplePct = Math.max(0, Math.round((this.coupleHp / this.coupleMaxHp) * 100));
+
+    document.getElementById('battle-enemy-hp-fill').style.width = enemyPct + '%';
+    document.getElementById('battle-couple-hp-fill').style.width = couplePct + '%';
+    document.getElementById('battle-enemy-hp-text').textContent = `${this.enemyHp}/${this.enemyMaxHp}`;
+    document.getElementById('battle-couple-hp-text').textContent = `${this.coupleHp}/${this.coupleMaxHp}`;
+    document.getElementById('battle-enemy-name').textContent = langConfig.ui.battleEnemyName;
+
+    const coupleName = (this.p1Name && this.p2Name)
+      ? `${this.p1Name} 💞 ${this.p2Name}`
+      : langConfig.ui.battleCoupleName;
+    document.getElementById('battle-couple-name').textContent = coupleName;
+  }
+
+  // Pisca/treme o avatar atingido para dar feedback de dano.
+  flashBattle(who) {
+    const id = who === 'enemy' ? 'battle-enemy-avatar' : 'battle-couple-avatar';
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('battle-shake');
+    void el.offsetWidth; // força reinício da animação
+    el.classList.add('battle-shake');
+  }
+
+  // Aplica o resultado de uma rodada de batalha e atualiza o HUD/estado.
+  applyBattleOutcome(isMatch, revealIcon, revealTitle, revealDesc) {
+    const langConfig = this.config[this.currentLang];
+    this.battleRounds++;
+
+    if (isMatch) {
+      this.battleHits++;
+      this.enemyHp = Math.max(0, this.enemyHp - this.BATTLE.hitDamage);
+      revealIcon.textContent = "⚔️";
+      revealIcon.className = "reveal-status-icon bounce-animation";
+      revealTitle.innerHTML = langConfig.ui.battleHitTitle.replace('{dmg}', this.BATTLE.hitDamage);
+      revealDesc.textContent = langConfig.ui.battleHitDesc;
+      this.synth.playMatchSound();
+      this.flashBattle('enemy');
+    } else {
+      this.coupleHp = Math.max(0, this.coupleHp - this.BATTLE.enemyDamage);
+      revealIcon.textContent = "🛡️";
+      revealIcon.className = "reveal-status-icon shake-animation";
+      revealTitle.innerHTML = langConfig.ui.battleMissTitle.replace('{dmg}', this.BATTLE.enemyDamage);
+      revealDesc.textContent = langConfig.ui.battleMissDesc;
+      this.synth.playMismatchSound();
+      this.flashBattle('couple');
+    }
+
+    this.renderBattleHud();
+
+    if (this.enemyHp <= 0) {
+      this.battleOver = true;
+      this.battleWon = true;
+    } else if (this.coupleHp <= 0) {
+      this.battleOver = true;
+      this.battleWon = false;
+    }
+  }
+
+  renderBattleResults(skipEffects) {
+    const langConfig = this.config[this.currentLang];
+    document.getElementById('results-quiz-container').classList.add('hidden');
+    document.getElementById('results-blind-container').classList.add('hidden');
+    document.getElementById('results-battle-container').classList.remove('hidden');
+
+    document.getElementById('lbl-results-title').textContent = this.battleWon
+      ? langConfig.ui.victoryResultsTitle : langConfig.ui.defeatResultsTitle;
+    document.getElementById('lbl-results-subtitle').textContent = this.battleWon
+      ? langConfig.ui.victoryResultsSubtitle : langConfig.ui.defeatResultsSubtitle;
+
+    document.getElementById('battle-result-icon').textContent = this.battleWon ? "🏆" : "💀";
+    document.getElementById('battle-result-title').textContent = this.battleWon
+      ? langConfig.ui.victoryTitle : langConfig.ui.defeatTitle;
+    document.getElementById('battle-result-desc').textContent = this.battleWon
+      ? langConfig.ui.victoryDesc : langConfig.ui.defeatDesc;
+
+    document.getElementById('lbl-battle-rounds').textContent = langConfig.ui.battleRoundsLabel;
+    document.getElementById('lbl-battle-hits').textContent = langConfig.ui.battleHitsLabel;
+    document.getElementById('battle-stat-rounds').textContent = this.battleRounds;
+    document.getElementById('battle-stat-hits').textContent = this.battleHits;
+
+    document.getElementById('btn-restart').textContent = langConfig.ui.btnRestart;
+
+    if (skipEffects) return;
+    if (this.battleWon) {
+      this.synth.playFanfareSound();
+      setTimeout(() => this.canvas.spawnBurst(window.innerWidth / 2, window.innerHeight / 2, 70), 300);
+    } else {
+      this.synth.playMismatchSound();
+    }
   }
 
   handleBlindRankSelection(rankNumber) {
@@ -1614,31 +1798,40 @@ class AffinityApp {
       this.matchesCount++;
       p1Box.classList.add('match-reveal');
       p2Box.classList.add('match-reveal');
-      revealIcon.textContent = "💖";
-      revealIcon.classList.add('bounce-animation');
-      revealTitle.innerHTML = langConfig.ui.revealMatchTitle;
-      revealDesc.textContent = langConfig.ui.revealMatchDesc;
-
-      this.synth.playMatchSound();
+      if (this.gameMode === 'duoBattle') {
+        this.applyBattleOutcome(true, revealIcon, revealTitle, revealDesc);
+      } else {
+        revealIcon.textContent = "💖";
+        revealIcon.classList.add('bounce-animation');
+        revealTitle.innerHTML = langConfig.ui.revealMatchTitle;
+        revealDesc.textContent = langConfig.ui.revealMatchDesc;
+        this.synth.playMatchSound();
+      }
       const rect = revealIcon.getBoundingClientRect();
       this.canvas.spawnBurst(rect.left + rect.width / 2, rect.top + rect.height / 2, 35);
     } else {
       p1Box.classList.add('mismatch-reveal');
       p2Box.classList.add('mismatch-reveal');
-      revealIcon.textContent = "💔";
-      revealIcon.classList.add('shake-animation');
-      revealTitle.innerHTML = langConfig.ui.revealMismatchTitle;
-      revealDesc.textContent = langConfig.ui.revealMismatchDesc;
-
-      this.synth.playMismatchSound();
+      if (this.gameMode === 'duoBattle') {
+        this.applyBattleOutcome(false, revealIcon, revealTitle, revealDesc);
+      } else {
+        revealIcon.textContent = "💔";
+        revealIcon.classList.add('shake-animation');
+        revealTitle.innerHTML = langConfig.ui.revealMismatchTitle;
+        revealDesc.textContent = langConfig.ui.revealMismatchDesc;
+        this.synth.playMismatchSound();
+      }
     }
 
     // Configura botões de controle de tela
-    const isLastQ = this.currentQuestionIdx === this.getActiveQuestions().length - 1;
+    const isLastQ = this.gameMode === 'duoBattle'
+      ? this.battleOver
+      : this.currentQuestionIdx === this.getActiveQuestions().length - 1;
+    const nextLabel = this.gameMode === 'duoBattle' ? langConfig.ui.battleNext : langConfig.ui.btnNext;
 
     if (this.isHost) {
       nextBtn.classList.remove('hidden');
-      nextBtn.textContent = isLastQ ? langConfig.ui.btnFinish : langConfig.ui.btnNext;
+      nextBtn.textContent = isLastQ ? langConfig.ui.btnFinish : nextLabel;
       nextBtn.disabled = false;
     } else {
       // Guest apenas aguarda o Host avançar
@@ -1650,7 +1843,6 @@ class AffinityApp {
   }
 
   nextQuestionMultiplayer() {
-    this.currentQuestionIdx++;
     this.myChosenIdx = null;
     this.partnerChosenIdx = null;
 
@@ -1659,6 +1851,24 @@ class AffinityApp {
     nextBtn.disabled = false;
     nextBtn.style.opacity = '1.0';
 
+    if (this.gameMode === 'duoBattle') {
+      if (this.battleOver) {
+        this.goToResults();
+        return;
+      }
+      this.currentQuestionIdx++;
+      if (this.currentQuestionIdx < this.getActiveQuestions().length) {
+        this.startNewQuestion();
+      } else {
+        // Sem perguntas restantes: decide pelo HP atual.
+        this.battleOver = true;
+        this.battleWon = this.enemyHp <= this.coupleHp;
+        this.goToResults();
+      }
+      return;
+    }
+
+    this.currentQuestionIdx++;
     const totalQ = this.gameMode === 'quiz' ? this.getActiveQuestions().length : 10;
 
     if (this.currentQuestionIdx < totalQ) {
@@ -1715,26 +1925,34 @@ class AffinityApp {
       this.matchesCount++;
       p1Box.classList.add('match-reveal');
       p2Box.classList.add('match-reveal');
-      revealIcon.textContent = "💖";
-      revealIcon.classList.add('bounce-animation');
-      revealTitle.innerHTML = langConfig.ui.revealMatchTitle;
-      revealDesc.textContent = langConfig.ui.revealMatchDesc;
-
-      this.synth.playMatchSound();
+      if (this.gameMode === 'duoBattle') {
+        this.applyBattleOutcome(true, revealIcon, revealTitle, revealDesc);
+      } else {
+        revealIcon.textContent = "💖";
+        revealIcon.classList.add('bounce-animation');
+        revealTitle.innerHTML = langConfig.ui.revealMatchTitle;
+        revealDesc.textContent = langConfig.ui.revealMatchDesc;
+        this.synth.playMatchSound();
+      }
       const rect = revealIcon.getBoundingClientRect();
       this.canvas.spawnBurst(rect.left + rect.width / 2, rect.top + rect.height / 2, 35);
     } else {
       p1Box.classList.add('mismatch-reveal');
       p2Box.classList.add('mismatch-reveal');
-      revealIcon.textContent = "💔";
-      revealIcon.classList.add('shake-animation');
-      revealTitle.innerHTML = langConfig.ui.revealMismatchTitle;
-      revealDesc.textContent = langConfig.ui.revealMismatchDesc;
-
-      this.synth.playMismatchSound();
+      if (this.gameMode === 'duoBattle') {
+        this.applyBattleOutcome(false, revealIcon, revealTitle, revealDesc);
+      } else {
+        revealIcon.textContent = "💔";
+        revealIcon.classList.add('shake-animation');
+        revealTitle.innerHTML = langConfig.ui.revealMismatchTitle;
+        revealDesc.textContent = langConfig.ui.revealMismatchDesc;
+        this.synth.playMismatchSound();
+      }
     }
 
-    if (this.currentQuestionIdx === activeQ.length - 1) {
+    if (this.gameMode === 'duoBattle') {
+      nextBtn.textContent = this.battleOver ? langConfig.ui.btnFinish : langConfig.ui.battleNext;
+    } else if (this.currentQuestionIdx === activeQ.length - 1) {
       nextBtn.textContent = langConfig.ui.btnFinish;
     } else {
       nextBtn.textContent = langConfig.ui.btnNext;
@@ -1746,12 +1964,19 @@ class AffinityApp {
   // ==========================================
   goToResults() {
     this.switchScreen('results');
-    this.synth.playFanfareSound();
     this.showBlindLiveRanking(false);
+
+    if (this.gameMode === 'duoBattle') {
+      this.renderBattleResults();
+      return;
+    }
+
+    this.synth.playFanfareSound();
 
     if (this.gameMode === 'blindRank') {
       document.getElementById('results-quiz-container').classList.add('hidden');
       document.getElementById('results-blind-container').classList.remove('hidden');
+      document.getElementById('results-battle-container').classList.add('hidden');
       document.getElementById('lbl-ranking-final-title').textContent = this.config[this.currentLang].ui.rankingFinalTitle;
       // No Blind Ranking, o botão final volta ao lobby em vez de "refazer".
       document.getElementById('btn-restart').textContent = this.config[this.currentLang].ui.btnBackToLobby;
@@ -1766,11 +1991,19 @@ class AffinityApp {
         rankNum.textContent = `#${i + 1}`;
         slotDiv.appendChild(rankNum);
         
-        if (this.blindFinalRanking[i]) {
-          const img = document.createElement('img');
-          img.src = this.blindFinalRanking[i].image;
-          img.className = 'rank-img-full';
-          slotDiv.appendChild(img);
+        const entry = this.blindFinalRanking[i];
+        if (entry) {
+          if (entry.image) {
+            const img = document.createElement('img');
+            img.src = entry.image;
+            img.className = 'rank-img-full';
+            slotDiv.appendChild(img);
+          } else {
+            const txt = document.createElement('span');
+            txt.className = 'rank-text-full';
+            txt.textContent = this.getBlindItemName(entry);
+            slotDiv.appendChild(txt);
+          }
         }
         boardContainer.appendChild(slotDiv);
       }
@@ -1779,6 +2012,7 @@ class AffinityApp {
 
     document.getElementById('results-quiz-container').classList.remove('hidden');
     document.getElementById('results-blind-container').classList.add('hidden');
+    document.getElementById('results-battle-container').classList.add('hidden');
 
     const langConfig = this.config[this.currentLang];
     const totalQ = this.getActiveQuestions().length;
@@ -1945,6 +2179,8 @@ class AffinityApp {
     const nextBtn = document.getElementById('btn-next-question');
     nextBtn.disabled = false;
     nextBtn.style.opacity = '1.0';
+
+    if (this.gameMode === 'duoBattle') this.initBattle();
 
     this.switchScreen('quiz');
     this.startNewQuestion();

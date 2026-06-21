@@ -1289,7 +1289,7 @@ form {
 
 .game-mode-options {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
@@ -1354,6 +1354,9 @@ form {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
+  max-height: 230px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .category-chip {
@@ -1424,6 +1427,41 @@ form {
   font-weight: 700;
   color: var(--text-highlight);
   text-align: center;
+}
+
+/* Text-only category: no image, show the phrase as a prominent card */
+.blind-item-name.text-item-big {
+  font-size: 1.5rem;
+  line-height: 1.35;
+  padding: 28px 20px;
+  margin-bottom: 6px;
+  border-radius: var(--border-radius-md);
+  background: rgba(236, 72, 153, 0.10);
+  border: 1px solid rgba(236, 72, 153, 0.30);
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Text label inside the small live-ranking slot */
+.live-rank-text {
+  font-size: 0.6rem;
+  line-height: 1.1;
+  color: var(--text-light);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+/* Text label inside the full results slot */
+.rank-text-full {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-light);
+  text-align: left;
+  line-height: 1.25;
 }
 
 .blind-options-grid {
@@ -1764,4 +1802,172 @@ form {
   #screen-quiz.active {
     padding-bottom: 120px;
   }
+}
+
+/* ==========================================================================
+   DUO BATTLE (Boss Fight) — HUD, HP bars e tela de resultado
+   ========================================================================== */
+
+/* Aperta os três botões de modo para caberem lado a lado */
+.game-mode-options .mode-icon { font-size: 1.5rem; }
+.game-mode-options .mode-name { font-size: 0.78rem; }
+.game-mode-options .mode-option { padding: 10px 6px; }
+
+/* HUD de batalha (topo da tela de quiz) */
+.battle-hud {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin-bottom: 22px;
+  padding: 12px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--glass-glow);
+}
+
+.battle-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.battle-couple { flex-direction: row-reverse; }
+
+.battle-avatar {
+  font-size: 2.2rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+  flex-shrink: 0;
+}
+
+.battle-bar-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.battle-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-highlight);
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.battle-couple .battle-name { text-align: right; }
+
+.hp-bar-bg {
+  position: relative;
+  height: 20px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+}
+
+.hp-bar-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 10px;
+  transition: width 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.enemy-hp .hp-bar-fill {
+  background: linear-gradient(90deg, #b91c1c 0%, #ef4444 60%, #f59e0b 100%);
+}
+
+.couple-hp .hp-bar-fill {
+  background: linear-gradient(90deg, #10b981 0%, #34d399 50%, #ec4899 100%);
+}
+
+.hp-bar-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  letter-spacing: 0.3px;
+}
+
+.battle-vs {
+  display: flex;
+  align-items: center;
+  font-size: 1.3rem;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+@keyframes battleShake {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  20% { transform: translateX(-4px) rotate(-6deg); }
+  40% { transform: translateX(4px) rotate(6deg); }
+  60% { transform: translateX(-3px) rotate(-4deg); }
+  80% { transform: translateX(3px) rotate(4deg); }
+}
+
+.battle-shake { animation: battleShake 0.45s ease; }
+
+/* Tela de resultado da batalha */
+#results-battle-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.battle-result-icon {
+  font-size: 4.5rem;
+  line-height: 1;
+  margin: 6px 0 12px;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+  animation: bounceIn 0.7s ease;
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0.3); opacity: 0; }
+  55% { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+.battle-result-stats {
+  display: flex;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.battle-result-stats .stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 22px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-md);
+}
+
+.battle-result-stats .stat-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.battle-result-stats .stat-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-highlight);
+}
+
+@media (max-width: 480px) {
+  .battle-avatar { font-size: 1.8rem; }
+  .battle-name { font-size: 0.72rem; }
+  .battle-vs { font-size: 1rem; }
 }
