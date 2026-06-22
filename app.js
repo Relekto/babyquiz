@@ -390,6 +390,26 @@ class AffinityApp {
     this.activeQuestionsSubjects = [];
     this.unreadCount = 0;
 
+    // Resiliência da conexão (reconexão automática + keepalive)
+    this.intentionalDisconnect = false;
+    this.reconnecting = false;
+    this.reconnectAttempts = 0;
+    this.reconnectTimer = null;
+    this.heartbeatTimer = null;
+    this.myName = "";
+    this.MAX_RECONNECT_ATTEMPTS = 10;
+    // STUN (Google) + TURN público (Open Relay) — TURN é o que salva em rede
+    // móvel/NAT restrito, onde a maioria das quedas acontece.
+    this.PEER_CONFIG = {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
+        { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
+        { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" }
+      ]
+    };
+
     // Elementos DOM
     this.screens = {
       welcome: document.getElementById('screen-welcome'),
@@ -796,6 +816,20 @@ class AffinityApp {
       this.sendChatMessage();
     });
 
+    // Ao voltar o foco (ex.: celular saiu do background), reconecta na hora.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!this.isMultiplayer || this.intentionalDisconnect) return;
+      if (this.conn && this.conn.open) return;
+      if (this.reconnecting) {
+        // Acelera: dispara uma tentativa imediata em vez de esperar o backoff.
+        if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
+        this.reconnectLoop();
+      } else {
+        this.handleConnectionLost();
+      }
+    });
+
     // Captura cliques na tela para explodir corações interativos
     window.addEventListener('click', (e) => {
       // Ignora cliques em botões para não sobrepor
@@ -818,19 +852,25 @@ class AffinityApp {
     statusDot.className = "status-dot connecting";
     statusText.textContent = langConfig.ui.lblMpConnectingStatus;
 
-    // Conecta ao servidor sinalizador gratuito do PeerJS
+    this.intentionalDisconnect = false;
+    // Guarda o próprio nome (imutável) para sincronização idempotente em reconexões.
+    this.myName = this.p1Name;
+
+    // Conecta ao servidor sinalizador do PeerJS (com STUN/TURN para NAT móvel)
     if (isHost) {
-      this.peer = new Peer(`namorados-love-${code}`);
+      this.peer = new Peer(`namorados-love-${code}`, { config: this.PEER_CONFIG });
 
       this.peer.on('open', () => {
         console.log("Sala criada com ID:", this.peer.id);
       });
 
       this.peer.on('connection', (conn) => {
+        // Nova conexão do guest (inclui reconexões). Substitui a anterior.
         this.conn = conn;
         this.setupConnectionCallbacks();
       });
 
+      this.peer.on('disconnected', () => this.handlePeerDisconnected());
       this.peer.on('error', (err) => {
         console.error("Erro no Host Peer:", err);
         if (err.type === 'unavailable-id') {
@@ -839,24 +879,37 @@ class AffinityApp {
           this.roomCode = newCode;
           document.getElementById('room-code-val').textContent = newCode;
           this.initPeer(true, newCode);
-        } else {
-          this.handleDisconnect();
+        } else if (err.type !== 'peer-unavailable' && err.type !== 'network') {
+          this.handleConnectionLost();
         }
       });
     } else {
-      this.peer = new Peer();
+      this.peer = new Peer(undefined, { config: this.PEER_CONFIG });
 
       this.peer.on('open', () => {
         console.log("Guest conectado ao sinalizador, conectando à sala:", code);
-        this.conn = this.peer.connect(`namorados-love-${code}`);
+        this.conn = this.peer.connect(`namorados-love-${code}`, { reliable: true });
         this.setupConnectionCallbacks();
       });
 
+      this.peer.on('disconnected', () => this.handlePeerDisconnected());
       this.peer.on('error', (err) => {
         console.error("Erro no Guest Peer:", err);
-        this.handleDisconnect();
+        // peer-unavailable acontece quando o host ainda não re-registrou:
+        // não desistimos, deixamos a lógica de reconexão tentar de novo.
+        if (err.type !== 'peer-unavailable' && err.type !== 'network') {
+          this.handleConnectionLost();
+        }
       });
     }
+  }
+
+  // O peer perdeu o servidor sinalizador (broker). Reconecta mantendo o mesmo ID.
+  handlePeerDisconnected() {
+    if (this.intentionalDisconnect || !this.peer || this.peer.destroyed) return;
+    console.log("Peer desconectado do broker — reconectando...");
+    this.showReconnectingStatus();
+    try { this.peer.reconnect(); } catch (e) { /* já reconectando */ }
   }
 
   setupConnectionCallbacks() {
@@ -867,7 +920,14 @@ class AffinityApp {
     this.conn.on('open', () => {
       statusDot.className = "status-dot online";
       statusText.textContent = langConfig.ui.lblMpConnectedStatus;
-      this.synth.playMatchSound();
+
+      // Reconexão bem-sucedida: encerra o laço e retoma o keepalive.
+      const wasReconnecting = this.reconnecting;
+      this.reconnecting = false;
+      this.reconnectAttempts = 0;
+      if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
+      this.startHeartbeat();
+      if (!wasReconnecting) this.synth.playMatchSound();
 
       // Mostra o container de chat e recolhe por padrão
       const chatContainer = document.getElementById('mp-chat-container');
@@ -881,35 +941,109 @@ class AffinityApp {
         if (msgs) msgs.innerHTML = "";
       }
 
-      if (this.isHost) {
-        // Envia nome do host
-        this.conn.send({
-          type: 'SYNC_NAME',
-          role: 'host',
-          name: this.p1Name
-        });
-      } else {
-        // Envia nome do guest
-        this.conn.send({
-          type: 'SYNC_NAME',
-          role: 'guest',
-          name: this.p1Name // Nome do guest estava no input player1-name
-        });
-      }
+      // Sempre envia o PRÓPRIO nome (this.myName nunca é mutado), pra que a
+      // re-sincronização numa reconexão não embaralhe os nomes.
+      this.conn.send({
+        type: 'SYNC_NAME',
+        role: this.isHost ? 'host' : 'guest',
+        name: this.myName
+      });
     });
 
     this.conn.on('data', (data) => {
+      // Keepalive: ignora pings/pongs, só servem pra manter o canal vivo.
+      if (data && (data.type === 'PING' || data.type === 'PONG')) return;
       this.handleIncomingData(data);
     });
 
     this.conn.on('close', () => {
-      this.handleDisconnect();
+      this.handleConnectionLost();
     });
 
     this.conn.on('error', (err) => {
       console.error("Erro na conexão:", err);
-      this.handleDisconnect();
+      this.handleConnectionLost();
     });
+  }
+
+  // ==========================================
+  // RESILIÊNCIA: keepalive + reconexão automática
+  // ==========================================
+  startHeartbeat() {
+    this.stopHeartbeat();
+    // Ping periódico evita que o NAT/celular derrube o canal por inatividade.
+    this.heartbeatTimer = setInterval(() => {
+      if (this.conn && this.conn.open) {
+        try { this.conn.send({ type: 'PING' }); } catch (e) { /* canal fechando */ }
+      }
+    }, 12000);
+  }
+
+  stopHeartbeat() {
+    if (this.heartbeatTimer) { clearInterval(this.heartbeatTimer); this.heartbeatTimer = null; }
+  }
+
+  showReconnectingStatus() {
+    const statusDot = document.getElementById('conn-status-dot');
+    const statusText = document.getElementById('conn-status-text');
+    if (statusDot) statusDot.className = "status-dot connecting";
+    if (statusText) statusText.textContent = this.config[this.currentLang].ui.lblMpReconnecting;
+  }
+
+  // Queda do canal/broker. Em vez de derrubar o jogo, inicia um laço de
+  // reconexão mantendo o estado da partida em memória.
+  handleConnectionLost() {
+    if (this.intentionalDisconnect) return;
+    // Evento atrasado de uma conexão antiga, mas a atual está saudável: ignora.
+    if (this.conn && this.conn.open) return;
+    if (this.reconnecting) return; // laço já em andamento
+    this.reconnecting = true;
+    this.reconnectAttempts = 0;
+    this.stopHeartbeat();
+    this.showReconnectingStatus();
+    this.reconnectLoop();
+  }
+
+  reconnectLoop() {
+    if (this.intentionalDisconnect || !this.reconnecting) return;
+
+    this.reconnectAttempts++;
+    if (this.reconnectAttempts > this.MAX_RECONNECT_ATTEMPTS) {
+      this.reconnecting = false;
+      this.handleDisconnect(); // desiste: avisa e volta ao lobby
+      return;
+    }
+
+    this.doReconnectAttempt();
+
+    // Backoff curto e crescente (2s..8s). O sucesso (conn 'open') encerra o laço.
+    const delay = Math.min(2000 + this.reconnectAttempts * 1000, 8000);
+    this.reconnectTimer = setTimeout(() => this.reconnectLoop(), delay);
+  }
+
+  doReconnectAttempt() {
+    if (this.intentionalDisconnect) return;
+
+    if (!this.peer || this.peer.destroyed) {
+      // Peer morreu de vez: recria do zero (guest reconecta sozinho no 'open').
+      this.initPeer(this.isHost, this.roomCode);
+      return;
+    }
+    if (this.peer.disconnected) {
+      // Broker caiu: reconecta ao sinalizador mantendo o ID.
+      try { this.peer.reconnect(); } catch (e) {}
+    }
+    if (!this.isHost) {
+      // Guest reabre o canal de dados com o host.
+      try {
+        if (this.conn) { try { this.conn.close(); } catch (e) {} }
+        this.conn = this.peer.connect(`namorados-love-${this.roomCode}`, { reliable: true });
+        this.setupConnectionCallbacks();
+      } catch (e) {
+        console.error("Falha ao reconectar:", e);
+      }
+    }
+    // Host apenas espera: o guest reabre via peer.on('connection').
   }
 
   handleIncomingData(data) {
@@ -917,22 +1051,23 @@ class AffinityApp {
 
     switch (data.type) {
       case 'SYNC_NAME':
+        // Idempotente: o host é sempre P1, o guest é sempre P2 (usa this.myName,
+        // que nunca muda) — assim re-sincronizar numa reconexão não embaralha nada.
         if (this.isHost) {
-          // Recebe nome do guest
+          this.p1Name = this.myName;
           this.p2Name = data.name;
           document.getElementById('lbl-mp-waiting-partner').classList.add('hidden');
           document.getElementById('mp-host-start-container').classList.remove('hidden');
           this.synth.playMatchSound();
         } else {
-          // Guest sincroniza nomes: Host passa a ser P1, Guest passa a ser P2
-          this.p2Name = this.p1Name; // Salva meu nome em P2
-          this.p1Name = data.name;   // Salva nome do parceiro em P1
+          this.p1Name = data.name;   // host = P1
+          this.p2Name = this.myName; // guest = P2
 
-          // Envia de volta o nome do Guest para o Host fechar a sincronização
+          // Responde com o próprio nome para o host fechar a sincronização
           this.conn.send({
             type: 'SYNC_NAME',
             role: 'guest',
-            name: this.p2Name
+            name: this.myName
           });
 
           // Mostra tela de aguardo para o guest
@@ -944,6 +1079,8 @@ class AffinityApp {
           `;
           this.synth.playMatchSound();
         }
+        document.querySelectorAll('.p1-name-display').forEach(el => el.textContent = this.p1Name);
+        document.querySelectorAll('.p2-name-display').forEach(el => el.textContent = this.p2Name);
         break;
 
       case 'START_GAME':
@@ -1016,6 +1153,11 @@ class AffinityApp {
     const statusText = document.getElementById('conn-status-text');
     const langConfig = this.config[this.currentLang];
 
+    this.stopHeartbeat();
+    if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
+    this.reconnectAttempts = 0;
+    this.reconnecting = false;
+
     statusDot.className = "status-dot offline";
     statusText.textContent = langConfig.ui.lblMpDisconnectedStatus;
     this.synth.playMismatchSound();
@@ -1034,6 +1176,12 @@ class AffinityApp {
   }
 
   disconnectPeer() {
+    this.intentionalDisconnect = true;
+    this.stopHeartbeat();
+    if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
+    this.reconnectAttempts = 0;
+    this.reconnecting = false;
+
     if (this.conn) {
       this.conn.close();
       this.conn = null;

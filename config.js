@@ -34,6 +34,7 @@ const coupleConfig = {
       lblMpConnectedStatus: "Online 🟢",
       lblMpDisconnectedStatus: "Offline 🔴",
       lblMpConnectingStatus: "Conectando... 🟡",
+      lblMpReconnecting: "Reconectando... 🔄",
       lblMpWaitingChoice: "Aguardando a escolha do seu amor... ⏳",
       lblP1NameOnline: "Seu Nome 💖",
 
@@ -162,6 +163,7 @@ const coupleConfig = {
       lblMpConnectedStatus: "Online 🟢",
       lblMpDisconnectedStatus: "Offline 🔴",
       lblMpConnectingStatus: "Connecting... 🟡",
+      lblMpReconnecting: "Reconnecting... 🔄",
       lblMpWaitingChoice: "Waiting for your love's choice... ⏳",
       lblP1NameOnline: "Your Name 💖",
 
