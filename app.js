@@ -1406,8 +1406,13 @@ class AffinityApp {
     const topics = blindRankingTopics[this.currentLang];
     if (this.selectedCategoryIdx >= topics.length) this.selectedCategoryIdx = 0;
 
+    // Ordem alfabética pelo título no idioma atual (mantém o índice real para a seleção).
+    const order = topics.map((_, i) => i)
+      .sort((a, b) => topics[a].title.localeCompare(topics[b].title, this.currentLang, { sensitivity: 'base' }));
+
     container.innerHTML = "";
-    topics.forEach((topic, idx) => {
+    order.forEach((idx) => {
+      const topic = topics[idx];
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'category-chip' + (idx === this.selectedCategoryIdx ? ' active' : '');
