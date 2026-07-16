@@ -445,6 +445,8 @@ class AffinityApp {
     this.pbStripCanvas = null;
     this.pbBuildingStrip = false;
     this.pbRevealTimers = [];
+    this.pbFrame = 'classic';      // 'classic' | 'kitties' | 'night' | 'film'
+    this.pbImgCache = null;        // fotos decodificadas (evita re-decodificar ao trocar moldura)
 
     // Estado do Multiplayer P2P
     this.isMultiplayer = false;
@@ -2597,6 +2599,103 @@ class AffinityApp {
     });
   }
 
+  // As molduras da tirinha — cada uma redesenha o resultado com outro clima
+  getPbFrameSpec() {
+    const specs = {
+      classic: {
+        bg: ['#fdf2f8', '#fce7f3', '#fbcfe8'],
+        inkDark: '#9d174d', inkMid: '#be185d',
+        cardColor: '#ffffff', cardShadow: 'rgba(157, 23, 77, 0.3)',
+        photoStroke: 'rgba(236, 72, 153, 0.35)', promptColor: '#be185d',
+        heart: '💖', rotAmp: 0.055,
+        confetti: 'pink', confettiColors: ['#ec4899', '#f472b6'],
+        corners: 'paws', cornerColor: '#f9a8d4',
+        ears: false, film: false, footer: 'cats'
+      },
+      kitties: {
+        bg: ['#fffbeb', '#fef3c7', '#fde68a'],
+        inkDark: '#9a3412', inkMid: '#c2410c',
+        cardColor: '#ffffff', cardShadow: 'rgba(154, 52, 27, 0.28)',
+        photoStroke: 'rgba(249, 115, 22, 0.4)', promptColor: '#c2410c',
+        heart: '🧡', rotAmp: 0.055,
+        confetti: 'cats', confettiColors: ['#fb923c', '#f472b6'],
+        corners: 'cats', cornerColor: '#fb923c',
+        ears: true, film: false, footer: 'yarn'
+      },
+      night: {
+        bg: ['#1e1b4b', '#312e81', '#4c1d95'],
+        inkDark: '#fbcfe8', inkMid: '#e9d5ff',
+        cardColor: '#ffffff', cardShadow: 'rgba(0, 0, 0, 0.55)',
+        photoStroke: 'rgba(139, 92, 246, 0.4)', promptColor: '#7e22ce',
+        heart: '💜', rotAmp: 0.03,
+        confetti: 'stars', confettiColors: ['#fbbf24', '#e9d5ff'],
+        corners: 'stars', cornerColor: '#fbbf24',
+        ears: false, film: false, footer: 'moon'
+      },
+      film: {
+        bg: ['#18181b', '#27272a', '#18181b'],
+        inkDark: '#fafafa', inkMid: '#d4d4d8',
+        cardColor: '#0f0f10', cardShadow: 'rgba(0, 0, 0, 0.8)',
+        photoStroke: 'rgba(250, 250, 250, 0.75)', promptColor: '#f4f4f5',
+        heart: '🤍', rotAmp: 0,
+        confetti: 'dust', confettiColors: ['#fafafa', '#a1a1aa'],
+        corners: 'none', cornerColor: '#fafafa',
+        ears: false, film: true, footer: 'film'
+      }
+    };
+    return specs[this.pbFrame] || specs.classic;
+  }
+
+  renderPbFramePicker() {
+    const container = document.getElementById('pb-frame-options');
+    if (!container) return;
+    const ui = this.config[this.currentLang].ui;
+    const frames = [
+      { id: 'classic', emoji: '🌸', label: ui.pbFrameClassic },
+      { id: 'kitties', emoji: '🐱', label: ui.pbFrameKitties },
+      { id: 'night', emoji: '🌙', label: ui.pbFrameNight },
+      { id: 'film', emoji: '🎞️', label: ui.pbFrameFilm }
+    ];
+    container.innerHTML = "";
+    frames.forEach(f => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'category-chip' + (f.id === this.pbFrame ? ' active' : '');
+      chip.innerHTML = `<span class="category-emoji">${f.emoji}</span><span class="category-label">${f.label}</span>`;
+      chip.addEventListener('click', () => {
+        if (this.pbBuildingStrip || this.pbFrame === f.id) return;
+        this.synth.playClickSound();
+        this.pbFrame = f.id;
+        [...container.children].forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        this.rebuildPbStrip();
+      });
+      container.appendChild(chip);
+    });
+  }
+
+  // Troca a moldura ao vivo: redesenha a tirinha com as mesmas fotos
+  async rebuildPbStrip() {
+    if (this.pbPhase !== 'reveal') return;
+    const img = document.getElementById('pb-strip-img');
+    img.classList.add('pb-swapping');
+    try {
+      await this.buildPbStrip();
+      img.src = this.pbStripCanvas.toDataURL('image/jpeg', 0.92);
+    } catch (e) {
+      console.error("Erro ao trocar a moldura:", e);
+    } finally {
+      img.classList.remove('pb-swapping');
+    }
+  }
+
+  showPbFramePicker() {
+    const picker = document.getElementById('pb-frame-picker');
+    if (!picker) return;
+    this.renderPbFramePicker();
+    picker.classList.remove('hidden');
+  }
+
   // Sorteia poses únicas (índices válidos nos dois idiomas)
   pickPbPromptIndices(count) {
     const pool = this.config[this.currentLang].pbPrompts;
@@ -2669,7 +2768,10 @@ class AffinityApp {
     setText('lbl-pb-reveal-title', isBlind ? ui.pbRevealTitleBlind : ui.pbRevealTitle);
     if (this.pbPhase === 'reveal' && this.pbStripCanvas) {
       setText('lbl-pb-reveal-desc', isBlind ? ui.pbRevealDescBlind : ui.pbRevealDesc);
+      this.rebuildPbStrip(); // re-desenha poses/textos da tirinha no novo idioma
     }
+    setText('lbl-pb-frame-title', ui.pbFrameTitle);
+    this.renderPbFramePicker();
     setText('pb-btn-download', ui.pbBtnDownload);
     setText('pb-btn-again', ui.pbBtnAgain);
     setText('pb-btn-lobby', ui.pbBtnLobby);
@@ -2702,12 +2804,14 @@ class AffinityApp {
     this.pbRevealRetries = 0;
     this.pbStripCanvas = null;
     this.pbBuildingStrip = false;
+    this.pbImgCache = null;
     const input = document.getElementById('pb-caption-input');
     if (input) input.value = "";
     document.getElementById('pb-caption-form').classList.remove('hidden');
     document.getElementById('pb-waiting-caption').classList.add('hidden');
     document.getElementById('pb-strip-img').removeAttribute('src');
     document.getElementById('pb-strip-covers').innerHTML = "";
+    document.getElementById('pb-frame-picker').classList.add('hidden');
   }
 
   // Nova rodada (mantém câmera e chamada de vídeo vivas)
@@ -3121,6 +3225,7 @@ class AffinityApp {
         setTimeout(() => this.playPbRevealAnimation(), 700);
       } else {
         document.getElementById('pb-strip-covers').innerHTML = "";
+        this.showPbFramePicker();
         this.synth.playFanfareSound();
         this.canvas.spawnBurst(window.innerWidth / 2, window.innerHeight / 2, 30);
       }
@@ -3231,7 +3336,48 @@ class AffinityApp {
     ctx.fill();
   }
 
-  drawPbPhoto(ctx, img, x, y, size) {
+  // Estrelinha de 4 pontas (moldura Noturna)
+  drawPbStar(ctx, cx, cy, size) {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - size);
+    ctx.quadraticCurveTo(cx + size * 0.18, cy - size * 0.18, cx + size, cy);
+    ctx.quadraticCurveTo(cx + size * 0.18, cy + size * 0.18, cx, cy + size);
+    ctx.quadraticCurveTo(cx - size * 0.18, cy + size * 0.18, cx - size, cy);
+    ctx.quadraticCurveTo(cx - size * 0.18, cy - size * 0.18, cx, cy - size);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Lua crescente (moldura Noturna)
+  drawPbMoon(ctx, cx, cy, r) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, Math.PI * 0.15, Math.PI * 1.85, false);
+    ctx.arc(cx + r * 0.75, cy, r * 0.72, Math.PI * 1.7, Math.PI * 0.3, true);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Novelo de lã (moldura Gatinhos)
+  drawPbYarn(ctx, cx, cy, r) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.lineWidth = Math.max(1.5, r * 0.16);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.6, 0.35, Math.PI + 0.5);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.62, Math.PI * 1.3, Math.PI * 2.15);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx + r, cy);
+    ctx.quadraticCurveTo(cx + r * 1.9, cy + r * 0.45, cx + r * 2.4, cy - r * 0.25);
+    ctx.stroke();
+  }
+
+  drawPbPhoto(ctx, img, x, y, size, strokeColor) {
     ctx.save();
     this.roundRectPath(ctx, x, y, size, size, 14);
     ctx.clip();
@@ -3245,7 +3391,7 @@ class AffinityApp {
       ctx.fillText('🙈', x + size / 2, y + size / 2 + 40);
     }
     ctx.restore();
-    ctx.strokeStyle = 'rgba(236, 72, 153, 0.35)';
+    ctx.strokeStyle = strokeColor || 'rgba(236, 72, 153, 0.35)';
     ctx.lineWidth = 3;
     this.roundRectPath(ctx, x, y, size, size, 14);
     ctx.stroke();
@@ -3285,21 +3431,47 @@ class AffinityApp {
         ]);
       } catch (e) { /* segue com a fonte padrão */ }
 
-      // Fundo rosinha degradê
+      const F = this.getPbFrameSpec();
+
+      // Fundo degradê da moldura
       const bg = ctx.createLinearGradient(0, 0, 0, H);
-      bg.addColorStop(0, '#fdf2f8');
-      bg.addColorStop(0.5, '#fce7f3');
-      bg.addColorStop(1, '#fbcfe8');
+      bg.addColorStop(0, F.bg[0]);
+      bg.addColorStop(0.5, F.bg[1]);
+      bg.addColorStop(1, F.bg[2]);
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, W, H);
 
-      // Confete de corações e patinhas (semeado = igual nos dois lados)
+      // Moldura "Filme": faixa escura com furinhos de rolo nas laterais
+      if (F.film) {
+        ctx.fillStyle = '#0a0a0a';
+        ctx.fillRect(18, 0, W - 36, H);
+        ctx.fillStyle = F.bg[0];
+        for (let y = 40; y < H - 30; y += 70) {
+          this.roundRectPath(ctx, 27, y, 26, 20, 5);
+          ctx.fill();
+          this.roundRectPath(ctx, W - 53, y, 26, 20, 5);
+          ctx.fill();
+        }
+      }
+
+      // Confete de fundo (semeado = igual nos dois lados)
       for (let i = 0; i < 60; i++) {
         const x = rng() * W, y = rng() * H, s = 14 + rng() * 22;
         ctx.globalAlpha = 0.07 + rng() * 0.09;
-        ctx.fillStyle = rng() < 0.5 ? '#ec4899' : '#f472b6';
-        if (rng() < 0.45) this.drawPbPaw(ctx, x, y, s, rng() * Math.PI * 2);
-        else this.drawPbHeartShape(ctx, x, y, s);
+        ctx.fillStyle = rng() < 0.5 ? F.confettiColors[0] : F.confettiColors[1];
+        const kind = rng();
+        if (F.confetti === 'stars') {
+          if (kind < 0.55) this.drawPbStar(ctx, x, y, s * 0.55);
+          else { ctx.beginPath(); ctx.arc(x, y, s * 0.14, 0, Math.PI * 2); ctx.fill(); }
+        } else if (F.confetti === 'cats') {
+          if (kind < 0.45) this.drawPbCatFace(ctx, x, y, s);
+          else this.drawPbPaw(ctx, x, y, s, rng() * Math.PI * 2);
+        } else if (F.confetti === 'dust') {
+          ctx.beginPath(); ctx.arc(x, y, 1 + s * 0.09, 0, Math.PI * 2); ctx.fill();
+        } else {
+          if (kind < 0.45) this.drawPbPaw(ctx, x, y, s, rng() * Math.PI * 2);
+          else this.drawPbHeartShape(ctx, x, y, s);
+        }
       }
       ctx.globalAlpha = 1;
 
@@ -3307,31 +3479,56 @@ class AffinityApp {
       const p1 = this.p1Name || 'Amor 1';
       const p2 = this.p2Name || 'Amor 2';
       ctx.textAlign = 'center';
-      ctx.fillStyle = '#9d174d';
+      ctx.fillStyle = F.inkDark;
       ctx.font = '700 74px "Dancing Script", cursive';
-      ctx.fillText(`${p1} 💖 ${p2}`, W / 2, 106, 940);
+      ctx.fillText(`${p1} ${F.heart} ${p2}`, W / 2, 106, 940);
       ctx.font = '800 26px "Outfit", sans-serif';
-      ctx.fillStyle = '#be185d';
+      ctx.fillStyle = F.inkMid;
       ctx.fillText(`· ${this.getPbDateStr()} ·`, W / 2, 154);
 
-      // Fotos: host (P1) sempre à esquerda, guest (P2) à direita
-      const leftShots = this.isHost ? this.pbMyShots : this.pbTheirShots;
-      const rightShots = this.isHost ? this.pbTheirShots : this.pbMyShots;
-      const leftImgs = await Promise.all(leftShots.map(s => this.loadPbImage(s)));
-      const rightImgs = await Promise.all(rightShots.map(s => this.loadPbImage(s)));
+      // Fotos: host (P1) sempre à esquerda, guest (P2) à direita.
+      // Decodifica uma vez só e guarda — trocar de moldura fica instantâneo.
+      if (!this.pbImgCache) {
+        const leftShots = this.isHost ? this.pbMyShots : this.pbTheirShots;
+        const rightShots = this.isHost ? this.pbTheirShots : this.pbMyShots;
+        this.pbImgCache = {
+          left: await Promise.all(leftShots.map(s => this.loadPbImage(s))),
+          right: await Promise.all(rightShots.map(s => this.loadPbImage(s)))
+        };
+      }
+      const leftImgs = this.pbImgCache.left;
+      const rightImgs = this.pbImgCache.right;
 
       for (let i = 0; i < N; i++) {
         const cy = headerH + i * rowH + rowH / 2;
-        const rot = (rng() - 0.5) * 0.055;
+        const rot = (rng() - 0.5) * F.rotAmp;
         ctx.save();
         ctx.translate(W / 2, cy);
         ctx.rotate(rot);
 
+        // Orelhinhas de gato saindo do topo do cartão (moldura Gatinhos)
+        if (F.ears) {
+          ctx.fillStyle = '#fb923c';
+          ctx.beginPath();
+          ctx.moveTo(-360, -244); ctx.lineTo(-310, -300); ctx.lineTo(-260, -244);
+          ctx.closePath(); ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(260, -244); ctx.lineTo(310, -300); ctx.lineTo(360, -244);
+          ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#fed7aa';
+          ctx.beginPath();
+          ctx.moveTo(-340, -248); ctx.lineTo(-310, -284); ctx.lineTo(-280, -248);
+          ctx.closePath(); ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(280, -248); ctx.lineTo(310, -284); ctx.lineTo(340, -248);
+          ctx.closePath(); ctx.fill();
+        }
+
         // Cartão estilo polaroid
-        ctx.shadowColor = 'rgba(157, 23, 77, 0.3)';
+        ctx.shadowColor = F.cardShadow;
         ctx.shadowBlur = 26;
         ctx.shadowOffsetY = 10;
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = F.cardColor;
         this.roundRectPath(ctx, -440, -250, 880, 500, 20);
         ctx.fill();
         ctx.shadowColor = 'transparent';
@@ -3339,28 +3536,39 @@ class AffinityApp {
         ctx.shadowOffsetY = 0;
 
         // As duas fotos, lado a lado
-        this.drawPbPhoto(ctx, leftImgs[i], -415, -225, 400);
-        this.drawPbPhoto(ctx, rightImgs[i], 15, -225, 400);
+        this.drawPbPhoto(ctx, leftImgs[i], -415, -225, 400, F.photoStroke);
+        this.drawPbPhoto(ctx, rightImgs[i], 15, -225, 400, F.photoStroke);
 
         // Coraçãozinho entre as fotos
         ctx.font = '42px "Outfit", sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('💖', 0, -10);
+        ctx.fillText(F.heart, 0, -10);
 
         // A pose da rodada
         ctx.font = 'italic 600 27px "Outfit", sans-serif';
-        ctx.fillStyle = '#be185d';
+        ctx.fillStyle = F.promptColor;
         ctx.fillText(this.getPbPrompt(this.pbPromptIndices[i]), 0, 232, 820);
 
-        // Patinhas nos cantos do cartão
-        ctx.fillStyle = '#f9a8d4';
-        this.drawPbPaw(ctx, -406, 218, 22, -0.4);
-        this.drawPbPaw(ctx, 406, 218, 22, 0.4);
+        // Enfeites nos cantos do cartão
+        if (F.corners === 'paws') {
+          ctx.fillStyle = F.cornerColor;
+          this.drawPbPaw(ctx, -406, 218, 22, -0.4);
+          this.drawPbPaw(ctx, 406, 218, 22, 0.4);
+        } else if (F.corners === 'cats') {
+          ctx.fillStyle = F.cornerColor;
+          this.drawPbCatFace(ctx, -404, 220, 34);
+          ctx.fillStyle = F.cornerColor;
+          this.drawPbCatFace(ctx, 404, 220, 34);
+        } else if (F.corners === 'stars') {
+          ctx.fillStyle = F.cornerColor;
+          this.drawPbStar(ctx, -406, 218, 16);
+          this.drawPbStar(ctx, 406, 218, 16);
+        }
 
         ctx.restore();
       }
 
-      // Rodapé: recadinhos + gatinhos
+      // Rodapé: recadinhos + enfeites da moldura
       let fy = headerH + N * rowH + 48;
       ctx.textAlign = 'center';
       const capLeft = this.isHost ? this.pbMyCaption : this.pbTheirCaption;
@@ -3368,7 +3576,7 @@ class AffinityApp {
       const capLines = [];
       if (capLeft) capLines.push({ text: capLeft, name: p1 });
       if (capRight) capLines.push({ text: capRight, name: p2 });
-      ctx.fillStyle = '#9d174d';
+      ctx.fillStyle = F.inkDark;
       ctx.font = '700 46px "Dancing Script", cursive';
       for (const line of capLines) {
         ctx.fillText(`“${line.text}” — ${line.name}`, W / 2, fy, 920);
@@ -3376,16 +3584,54 @@ class AffinityApp {
       }
 
       const catY = H - 96;
-      ctx.fillStyle = '#ec4899';
-      this.drawPbCatFace(ctx, 110, catY, 56);
-      ctx.fillStyle = '#ec4899';
-      this.drawPbCatFace(ctx, W - 110, catY, 56);
-      ctx.fillStyle = '#f472b6';
-      for (let px = 220; px <= W - 220; px += 72) {
-        this.drawPbPaw(ctx, px, catY + ((px / 72) % 2 ? -8 : 10), 15, ((px / 72) % 5) * 0.2);
+      if (F.footer === 'yarn') {
+        ctx.fillStyle = '#fb923c';
+        this.drawPbCatFace(ctx, 110, catY, 56);
+        ctx.fillStyle = '#fb923c';
+        this.drawPbCatFace(ctx, W - 110, catY, 56);
+        let k = 0;
+        for (let px = 220; px <= W - 220; px += 84) {
+          if (k % 2 === 0) {
+            ctx.fillStyle = '#f472b6';
+            this.drawPbPaw(ctx, px, catY + (k % 4 ? -8 : 10), 15, (k % 5) * 0.2);
+          } else {
+            ctx.fillStyle = '#fb923c';
+            this.drawPbYarn(ctx, px, catY + (k % 4 ? 8 : -6), 13);
+          }
+          k++;
+        }
+      } else if (F.footer === 'moon') {
+        ctx.fillStyle = '#fbbf24';
+        this.drawPbMoon(ctx, 110, catY, 36);
+        ctx.fillStyle = '#f472b6';
+        this.drawPbCatFace(ctx, W - 110, catY, 56);
+        ctx.fillStyle = '#fbbf24';
+        let k = 0;
+        for (let px = 220; px <= W - 220; px += 72) {
+          this.drawPbStar(ctx, px, catY + (k % 2 ? -8 : 10), k % 3 ? 9 : 14);
+          k++;
+        }
+      } else if (F.footer === 'film') {
+        ctx.fillStyle = '#f472b6';
+        this.drawPbCatFace(ctx, 110, catY, 56);
+        ctx.fillStyle = '#f472b6';
+        this.drawPbCatFace(ctx, W - 110, catY, 56);
+        ctx.fillStyle = 'rgba(250, 250, 250, 0.85)';
+        for (let px = 220; px <= W - 220; px += 72) {
+          this.drawPbPaw(ctx, px, catY + ((px / 72) % 2 ? -8 : 10), 15, ((px / 72) % 5) * 0.2);
+        }
+      } else {
+        ctx.fillStyle = '#ec4899';
+        this.drawPbCatFace(ctx, 110, catY, 56);
+        ctx.fillStyle = '#ec4899';
+        this.drawPbCatFace(ctx, W - 110, catY, 56);
+        ctx.fillStyle = '#f472b6';
+        for (let px = 220; px <= W - 220; px += 72) {
+          this.drawPbPaw(ctx, px, catY + ((px / 72) % 2 ? -8 : 10), 15, ((px / 72) % 5) * 0.2);
+        }
       }
 
-      ctx.fillStyle = '#be185d';
+      ctx.fillStyle = F.inkMid;
       ctx.font = '800 22px "Outfit", sans-serif';
       const branding = `😺 ${this.config[this.currentLang].ui.pbStripBranding} 😺`;
       ctx.fillText(branding.toUpperCase(), W / 2, H - 24);
@@ -3425,6 +3671,7 @@ class AffinityApp {
           this.pbRevealTimers.push(setTimeout(() => {
             this.synth.playFanfareSound();
             this.canvas.spawnBurst(window.innerWidth / 2, window.innerHeight / 2, 30);
+            this.showPbFramePicker();
             try { wrap.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
           }, 900));
         }

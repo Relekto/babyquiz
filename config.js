@@ -139,7 +139,12 @@ const coupleConfig = {
       pbBtnLobby: "Voltar ao Lobby 🏠",
       pbGuestWaitHost: "O host decide a próxima rodada 😺",
       pbStripBranding: "photobooth do amor",
-      pbVideoConnecting: "Conectando o vídeo... 💞"
+      pbVideoConnecting: "Conectando o vídeo... 💞",
+      pbFrameTitle: "Moldura da Tirinha:",
+      pbFrameClassic: "Rosinha",
+      pbFrameKitties: "Gatinhos",
+      pbFrameNight: "Noturna",
+      pbFrameFilm: "Filme"
     },
 
     // Poses do Photobooth (sincronizadas por índice com o inglês)
@@ -328,7 +333,12 @@ const coupleConfig = {
       pbBtnLobby: "Back to Lobby 🏠",
       pbGuestWaitHost: "The host picks the next round 😺",
       pbStripBranding: "love photobooth",
-      pbVideoConnecting: "Connecting video... 💞"
+      pbVideoConnecting: "Connecting video... 💞",
+      pbFrameTitle: "Strip Frame:",
+      pbFrameClassic: "Pink",
+      pbFrameKitties: "Kitties",
+      pbFrameNight: "Night Sky",
+      pbFrameFilm: "Film"
     },
 
     // Photobooth pose prompts (index-synced with Portuguese)

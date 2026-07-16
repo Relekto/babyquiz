@@ -2338,3 +2338,21 @@ form {
   .pb-strip-wrap { max-width: 290px; }
   .pb-mode-desc { font-size: 0.62rem; }
 }
+
+/* Seletor de moldura da tirinha (tela de revelação) */
+.pb-frame-picker {
+  margin-bottom: 12px;
+  animation: categoryFadeIn 0.35s ease both;
+}
+
+.pb-frame-picker.hidden {
+  display: none;
+}
+
+#pb-strip-img {
+  transition: opacity 0.25s ease;
+}
+
+#pb-strip-img.pb-swapping {
+  opacity: 0.35;
+}
