@@ -288,6 +288,50 @@ class RomanticSynth {
     }, 60);
   }
 
+  // Photobooth: tique da contagem regressiva (3, 2, 1)
+  playCountdownTick() {
+    this.init();
+    this.playTone(659.25, 'sine', 0.12, 0.15);
+  }
+
+  // Photobooth: "vai!" no momento da foto
+  playCountdownGo() {
+    this.init();
+    this.playTone(880.00, 'sine', 0.3, 0.16, 1174.66);
+  }
+
+  // Photobooth: clique do obturador (rajada de ruído + estalo)
+  playShutterSound() {
+    this.init();
+    if (this.isMuted || !this.ctx) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+
+    // Rajada curta de ruído branco (som mecânico da câmera)
+    const dur = 0.09;
+    const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * dur, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    }
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.22, this.ctx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + dur);
+    noise.connect(noiseGain);
+    noiseGain.connect(this.ctx.destination);
+    noise.start();
+
+    // Estalo agudo que cai rápido (o "click")
+    this.playTone(1400, 'triangle', 0.08, 0.18, 300);
+  }
+
+  // Photobooth: foto "revelando" na tirinha
+  playDevelopSound() {
+    this.init();
+    this.playTone(523.25, 'sine', 0.28, 0.1, 783.99);
+  }
+
   // Música de fundo gerada em tempo real
   startAmbientMusic() {
     this.init();
@@ -378,6 +422,30 @@ class AffinityApp {
     this.battleRounds = 0;
     this.battleHits = 0;
 
+    // Estado do Photobooth 📸
+    this.PB_TOTAL_SHOTS = 5;
+    this.pbSubMode = 'together';   // 'together' | 'blind'
+    this.pbFilter = 'none';        // 'none' | 'vintage' | 'pink' | 'bw'
+    this.pbPromptIndices = [];
+    this.pbSeed = 1;
+    this.pbPhase = 'idle';         // idle | setup | shoot | caption | reveal
+    this.pbShotIdx = 0;
+    this.pbMyShots = [];
+    this.pbTheirShots = [];
+    this.pbMyReady = false;
+    this.pbPartnerReady = false;
+    this.pbMyCaption = null;       // null = ainda não enviado; "" = pulou
+    this.pbTheirCaption = null;
+    this.pbLocalStream = null;
+    this.pbMediaCall = null;
+    this.pbPendingCall = null;     // chamada recebida antes da câmera liberar
+    this.pbShotTimers = [];
+    this.pbAdvanceTimer = null;
+    this.pbShotTimeoutTimer = null;
+    this.pbStripCanvas = null;
+    this.pbBuildingStrip = false;
+    this.pbRevealTimers = [];
+
     // Estado do Multiplayer P2P
     this.isMultiplayer = false;
     this.isHost = false;
@@ -414,7 +482,8 @@ class AffinityApp {
     this.screens = {
       welcome: document.getElementById('screen-welcome'),
       quiz: document.getElementById('screen-quiz'),
-      results: document.getElementById('screen-results')
+      results: document.getElementById('screen-results'),
+      photobooth: document.getElementById('screen-photobooth')
     };
 
     this.quizSteps = {
@@ -422,6 +491,13 @@ class AffinityApp {
       transition: document.getElementById('quiz-transition'),
       p2Turn: document.getElementById('quiz-p2-turn'),
       reveal: document.getElementById('quiz-reveal')
+    };
+
+    this.pbSteps = {
+      setup: document.getElementById('pb-step-setup'),
+      shoot: document.getElementById('pb-step-shoot'),
+      caption: document.getElementById('pb-step-caption'),
+      reveal: document.getElementById('pb-step-reveal')
     };
 
     this.setupEventListeners();
@@ -456,7 +532,8 @@ class AffinityApp {
     const modeButtons = {
       quiz: document.getElementById('mode-quiz-btn'),
       blindRank: document.getElementById('mode-blind-btn'),
-      duoBattle: document.getElementById('mode-battle-btn')
+      duoBattle: document.getElementById('mode-battle-btn'),
+      photobooth: document.getElementById('mode-photobooth-btn')
     };
     Object.entries(modeButtons).forEach(([mode, btn]) => {
       if (!btn) return;
@@ -469,6 +546,67 @@ class AffinityApp {
     // Renderiza o seletor de categoria inicial
     this.renderCategoryPicker();
     this.updateCategoryPickerVisibility();
+
+    // Photobooth: sub-modo (Juntinhos / Surpresa)
+    document.querySelectorAll('.pb-submode-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.synth.playClickSound();
+        this.pbSubMode = btn.dataset.pbmode;
+        document.querySelectorAll('.pb-submode-option').forEach(b => {
+          b.classList.toggle('active', b === btn);
+        });
+      });
+    });
+
+    // Photobooth: filtro + demais controles
+    this.renderPbFilterPicker();
+    this.updatePbPickerVisibility();
+
+    document.getElementById('pb-btn-ready').addEventListener('click', () => {
+      this.synth.playClickSound();
+      this.onPbReadyClick();
+    });
+
+    document.getElementById('pb-btn-retry-cam').addEventListener('click', () => {
+      this.synth.playClickSound();
+      this.initPbCamera();
+    });
+
+    document.getElementById('pb-btn-caption-done').addEventListener('click', () => {
+      this.synth.playClickSound();
+      const text = document.getElementById('pb-caption-input').value.trim();
+      this.submitPbCaption(text);
+    });
+
+    document.getElementById('pb-btn-caption-skip').addEventListener('click', () => {
+      this.synth.playClickSound();
+      this.submitPbCaption("");
+    });
+
+    document.getElementById('pb-caption-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.submitPbCaption(e.target.value.trim());
+      }
+    });
+
+    document.getElementById('pb-btn-download').addEventListener('click', () => {
+      this.synth.playClickSound();
+      this.downloadPbStrip();
+    });
+
+    document.getElementById('pb-btn-again').addEventListener('click', () => {
+      this.synth.playClickSound();
+      this.restartPhotobooth();
+    });
+
+    document.getElementById('pb-btn-lobby').addEventListener('click', () => {
+      this.synth.playClickSound();
+      if (this.conn && this.conn.open) {
+        this.conn.send({ type: 'BACK_TO_LOBBY' });
+      }
+      this.returnToLobby();
+    });
 
     // Escolha: Jogar Online (Mostra painel MP)
     document.getElementById('btn-play-online').addEventListener('click', () => {
@@ -610,6 +748,22 @@ class AffinityApp {
             questionIndices: indices,
             questionSubjects: subjects
           });
+        } else if (this.gameMode === 'photobooth') {
+          this.pbPromptIndices = this.pickPbPromptIndices(this.PB_TOTAL_SHOTS);
+          this.pbSeed = Math.floor(Math.random() * 1e9) + 1;
+          this.conn.send({
+            type: 'START_GAME',
+            gameMode: 'photobooth',
+            p1Name: this.p1Name,
+            p2Name: this.p2Name,
+            pbSubMode: this.pbSubMode,
+            pbFilter: this.pbFilter,
+            pbPromptIndices: this.pbPromptIndices,
+            pbSeed: this.pbSeed
+          });
+          this.synth.startAmbientMusic();
+          this.startPhotobooth();
+          return;
         } else {
           const topics = blindRankingTopics[this.currentLang];
           this.blindRankingTopic = this.selectedCategoryIdx;
@@ -870,6 +1024,8 @@ class AffinityApp {
         this.setupConnectionCallbacks();
       });
 
+      this.peer.on('call', (call) => this.handleIncomingMediaCall(call));
+
       this.peer.on('disconnected', () => this.handlePeerDisconnected());
       this.peer.on('error', (err) => {
         console.error("Erro no Host Peer:", err);
@@ -891,6 +1047,8 @@ class AffinityApp {
         this.conn = this.peer.connect(`namorados-love-${code}`, { reliable: true });
         this.setupConnectionCallbacks();
       });
+
+      this.peer.on('call', (call) => this.handleIncomingMediaCall(call));
 
       this.peer.on('disconnected', () => this.handlePeerDisconnected());
       this.peer.on('error', (err) => {
@@ -948,6 +1106,12 @@ class AffinityApp {
         role: this.isHost ? 'host' : 'guest',
         name: this.myName
       });
+
+      // Photobooth "Juntinhos": se a conexão voltou no meio da sessão,
+      // o host reabre a chamada de vídeo.
+      if (this.isHost && this.gameMode === 'photobooth' && this.pbPhase !== 'idle') {
+        setTimeout(() => this.ensurePbMediaCall(), 800);
+      }
     });
 
     this.conn.on('data', (data) => {
@@ -1088,6 +1252,19 @@ class AffinityApp {
         this.p1Name = data.p1Name;
         this.p2Name = data.p2Name;
         this.gameMode = data.gameMode || 'quiz';
+        document.querySelectorAll('.p1-name-display').forEach(el => el.textContent = this.p1Name);
+        document.querySelectorAll('.p2-name-display').forEach(el => el.textContent = this.p2Name);
+
+        if (this.gameMode === 'photobooth') {
+          this.pbSubMode = data.pbSubMode || 'together';
+          this.pbFilter = data.pbFilter || 'none';
+          this.pbPromptIndices = data.pbPromptIndices || [];
+          this.pbSeed = data.pbSeed || 1;
+          this.synth.startAmbientMusic();
+          this.startPhotobooth();
+          break;
+        }
+
         if (this.gameMode === 'quiz' || this.gameMode === 'duoBattle') {
           this.activeQuestionsIndices = data.questionIndices;
           this.activeQuestionsSubjects = data.questionSubjects || [];
@@ -1096,8 +1273,6 @@ class AffinityApp {
           this.blindRankingTopic = data.blindRankingTopic;
           this.blindRankingItems = data.blindRankingItems;
         }
-        document.querySelectorAll('.p1-name-display').forEach(el => el.textContent = this.p1Name);
-        document.querySelectorAll('.p2-name-display').forEach(el => el.textContent = this.p2Name);
 
         this.synth.startAmbientMusic();
         this.startQuiz();
@@ -1124,6 +1299,42 @@ class AffinityApp {
           this.activeQuestionsSubjects = data.questionSubjects || [];
         }
         this.resetQuizMultiplayer();
+        break;
+
+      // ========== PHOTOBOOTH ==========
+      case 'PB_READY':
+        this.pbPartnerReady = true;
+        this.checkPbBothReady();
+        break;
+
+      case 'PB_BEGIN':
+        // Host avisou: os dois estão prontos, começa a sessão
+        this.enterPbShootPhase();
+        break;
+
+      case 'PB_SHOT':
+        // Host disparou a contagem da foto N
+        this.runPbShot(data.shotIdx);
+        break;
+
+      case 'PB_PHOTO':
+        if (typeof data.shotIdx === 'number' && data.shotIdx >= 0 && data.shotIdx < this.PB_TOTAL_SHOTS) {
+          this.pbTheirShots[data.shotIdx] = data.img;
+          this.updatePbThumb(data.shotIdx);
+          if (this.isHost) this.maybeAdvancePbShot();
+        }
+        break;
+
+      case 'PB_CAPTION':
+        this.pbTheirCaption = (typeof data.text === 'string') ? data.text : "";
+        this.maybePbReveal();
+        break;
+
+      case 'PB_RESTART':
+        this.pbPromptIndices = data.pbPromptIndices || this.pbPromptIndices;
+        this.pbSeed = data.pbSeed || this.pbSeed;
+        this.resetPbRound();
+        this.enterPbShootPhase();
         break;
 
       case 'CHAT_MSG':
@@ -1172,11 +1383,18 @@ class AffinityApp {
       alert(this.currentLang === 'pt' ? "Conexão com seu amor perdida! 💔" : "Connection with your partner lost! 💔");
       this.resetQuiz();
       this.switchScreen('welcome');
+    } else if (this.screens.photobooth.classList.contains('active')) {
+      alert(this.currentLang === 'pt' ? "Conexão com seu amor perdida! 💔" : "Connection with your partner lost! 💔");
+      this.stopPhotoboothMedia();
+      this.pbPhase = 'idle';
+      this.switchScreen('welcome');
     }
   }
 
   disconnectPeer() {
     this.intentionalDisconnect = true;
+    this.stopPhotoboothMedia();
+    this.pbPhase = 'idle';
     this.stopHeartbeat();
     if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
     this.reconnectAttempts = 0;
@@ -1225,6 +1443,9 @@ class AffinityApp {
     if (lblModeBattle) lblModeBattle.textContent = langConfig.ui.modeBattle;
     document.getElementById('lbl-category-title').textContent = langConfig.ui.categoryTitle;
     this.renderCategoryPicker();
+
+    // Photobooth (seletores + telas)
+    this.updatePhotoboothTexts();
 
     // Welcome actions
     document.getElementById('btn-play-online').textContent = langConfig.ui.btnPlayOnline;
@@ -1589,12 +1810,13 @@ class AffinityApp {
   // ==========================================
   setGameMode(mode) {
     this.gameMode = mode;
-    const ids = { quiz: 'mode-quiz-btn', blindRank: 'mode-blind-btn', duoBattle: 'mode-battle-btn' };
+    const ids = { quiz: 'mode-quiz-btn', blindRank: 'mode-blind-btn', duoBattle: 'mode-battle-btn', photobooth: 'mode-photobooth-btn' };
     Object.entries(ids).forEach(([m, id]) => {
       const el = document.getElementById(id);
       if (el) el.classList.toggle('active', m === mode);
     });
     this.updateCategoryPickerVisibility();
+    this.updatePbPickerVisibility();
     if (mode === 'blindRank') this.renderCategoryPicker();
   }
 
@@ -2339,10 +2561,967 @@ class AffinityApp {
     this.startNewQuestion();
   }
 
+  // ==========================================
+  // PHOTOBOOTH 📸🐱 — cabine de fotos do casal
+  // ==========================================
+
+  updatePbPickerVisibility() {
+    const picker = document.getElementById('pb-options-picker');
+    if (!picker) return;
+    picker.classList.toggle('hidden', this.gameMode !== 'photobooth');
+  }
+
+  renderPbFilterPicker() {
+    const container = document.getElementById('pb-filter-options');
+    if (!container) return;
+    const ui = this.config[this.currentLang].ui;
+    const filters = [
+      { id: 'none', emoji: '✨', label: ui.pbFilterNone },
+      { id: 'vintage', emoji: '🎞️', label: ui.pbFilterVintage },
+      { id: 'pink', emoji: '🌸', label: ui.pbFilterPink },
+      { id: 'bw', emoji: '🎬', label: ui.pbFilterBw }
+    ];
+    container.innerHTML = "";
+    filters.forEach(f => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'category-chip' + (f.id === this.pbFilter ? ' active' : '');
+      chip.innerHTML = `<span class="category-emoji">${f.emoji}</span><span class="category-label">${f.label}</span>`;
+      chip.addEventListener('click', () => {
+        this.synth.playClickSound();
+        this.pbFilter = f.id;
+        [...container.children].forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      });
+      container.appendChild(chip);
+    });
+  }
+
+  // Sorteia poses únicas (índices válidos nos dois idiomas)
+  pickPbPromptIndices(count) {
+    const pool = this.config[this.currentLang].pbPrompts;
+    const n = Math.min(count, pool.length);
+    const indices = [];
+    while (indices.length < n) {
+      const idx = Math.floor(Math.random() * pool.length);
+      if (!indices.includes(idx)) indices.push(idx);
+    }
+    return indices;
+  }
+
+  getPbPrompt(poolIdx) {
+    const pool = this.config[this.currentLang].pbPrompts;
+    return pool[poolIdx] || "";
+  }
+
+  showPbStep(stepName) {
+    Object.values(this.pbSteps).forEach(step => step.classList.remove('active'));
+    this.pbSteps[stepName].classList.add('active');
+  }
+
+  // Traduz todos os textos do photobooth (chamado pelo updateLanguage)
+  updatePhotoboothTexts() {
+    const ui = this.config[this.currentLang].ui;
+    const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+
+    // Seletores na tela inicial
+    setText('lbl-mode-photobooth', ui.modePhotobooth);
+    setText('lbl-pb-submode-title', ui.pbSubModeTitle);
+    setText('lbl-pb-mode-together', ui.pbModeTogether);
+    setText('lbl-pb-mode-together-desc', ui.pbModeTogetherDesc);
+    setText('lbl-pb-mode-blind', ui.pbModeBlind);
+    setText('lbl-pb-mode-blind-desc', ui.pbModeBlindDesc);
+    setText('lbl-pb-filter-title', ui.pbFilterTitle);
+    this.renderPbFilterPicker();
+
+    // Etapa: checagem da câmera
+    setText('lbl-pb-setup-title', ui.pbSetupTitle);
+    setText('lbl-pb-setup-desc', ui.pbSetupDesc);
+    setText('pb-btn-ready', ui.pbBtnReady);
+    setText('pb-waiting-ready', ui.pbWaitingPartner);
+    setText('lbl-pb-cam-error', ui.pbCamError);
+    setText('pb-btn-retry-cam', ui.pbBtnRetryCam);
+    setText('lbl-pb-you-setup', ui.pbYouLabel);
+
+    // Etapa: sessão de fotos
+    setText('lbl-pb-you', ui.pbYouLabel);
+    const partnerName = this.isHost ? this.p2Name : this.p1Name;
+    setText('lbl-pb-partner', partnerName ? `${partnerName} 💕` : ui.pbPartnerLabel);
+    setText('lbl-pb-partner-hidden', ui.pbPartnerHidden);
+    setText('lbl-pb-video-connecting', ui.pbVideoConnecting);
+    if (this.pbPhase === 'shoot') {
+      setText('pb-shot-progress', ui.pbShotProgress.replace('{num}', this.pbShotIdx + 1).replace('{total}', this.PB_TOTAL_SHOTS));
+      const promptEl = document.getElementById('pb-prompt-text');
+      if (promptEl) promptEl.textContent = this.getPbPrompt(this.pbPromptIndices[this.pbShotIdx]);
+    }
+
+    // Etapa: recadinho
+    setText('lbl-pb-caption-title', ui.pbCaptionTitle);
+    setText('lbl-pb-caption-desc', ui.pbCaptionDesc);
+    const capInput = document.getElementById('pb-caption-input');
+    if (capInput) capInput.placeholder = ui.pbCaptionPlaceholder;
+    setText('pb-btn-caption-done', ui.pbBtnCaptionDone);
+    setText('pb-btn-caption-skip', ui.pbBtnCaptionSkip);
+    setText('pb-waiting-caption', ui.pbWaitingCaption);
+
+    // Etapa: revelação
+    const isBlind = this.pbSubMode === 'blind';
+    setText('lbl-pb-reveal-title', isBlind ? ui.pbRevealTitleBlind : ui.pbRevealTitle);
+    if (this.pbPhase === 'reveal' && this.pbStripCanvas) {
+      setText('lbl-pb-reveal-desc', isBlind ? ui.pbRevealDescBlind : ui.pbRevealDesc);
+    }
+    setText('pb-btn-download', ui.pbBtnDownload);
+    setText('pb-btn-again', ui.pbBtnAgain);
+    setText('pb-btn-lobby', ui.pbBtnLobby);
+    setText('pb-guest-wait-note', ui.pbGuestWaitHost);
+  }
+
+  // ---------- Ciclo de vida ----------
+
+  startPhotobooth() {
+    this.pbPhase = 'setup';
+    this.pbMyReady = false;
+    this.pbPartnerReady = false;
+    this.resetPbShotState();
+    this.switchScreen('photobooth');
+    this.showPbStep('setup');
+    document.getElementById('pb-btn-ready').classList.remove('hidden');
+    document.getElementById('pb-waiting-ready').classList.add('hidden');
+    this.updatePhotoboothTexts();
+    this.applyPbLiveFilterClasses();
+    this.initPbCamera();
+  }
+
+  resetPbShotState() {
+    this.clearPbTimers();
+    this.pbShotIdx = 0;
+    this.pbMyShots = new Array(this.PB_TOTAL_SHOTS).fill(null);
+    this.pbTheirShots = new Array(this.PB_TOTAL_SHOTS).fill(null);
+    this.pbMyCaption = null;
+    this.pbTheirCaption = null;
+    this.pbRevealRetries = 0;
+    this.pbStripCanvas = null;
+    this.pbBuildingStrip = false;
+    const input = document.getElementById('pb-caption-input');
+    if (input) input.value = "";
+    document.getElementById('pb-caption-form').classList.remove('hidden');
+    document.getElementById('pb-waiting-caption').classList.add('hidden');
+    document.getElementById('pb-strip-img').removeAttribute('src');
+    document.getElementById('pb-strip-covers').innerHTML = "";
+  }
+
+  // Nova rodada (mantém câmera e chamada de vídeo vivas)
+  resetPbRound() {
+    this.pbPhase = 'between';
+    this.resetPbShotState();
+  }
+
+  async initPbCamera() {
+    const errBox = document.getElementById('pb-cam-error');
+    const readyBtn = document.getElementById('pb-btn-ready');
+    errBox.classList.add('hidden');
+    readyBtn.disabled = true;
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('mediaDevices indisponível (precisa de HTTPS)');
+      }
+      if (!this.pbLocalStream || !this.pbLocalStream.active) {
+        this.pbLocalStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+          audio: false
+        });
+      }
+      document.getElementById('pb-video-setup').srcObject = this.pbLocalStream;
+      document.getElementById('pb-video-self').srcObject = this.pbLocalStream;
+      readyBtn.disabled = false;
+
+      // Se o host ligou antes da câmera liberar, atende agora
+      if (this.pbPendingCall) {
+        const call = this.pbPendingCall;
+        this.pbPendingCall = null;
+        try {
+          call.answer(this.pbLocalStream);
+          this.attachPbMediaCall(call);
+        } catch (e) { console.error("Falha ao atender vídeo:", e); }
+      }
+    } catch (e) {
+      console.error("Erro de câmera:", e);
+      errBox.classList.remove('hidden');
+    }
+  }
+
+  onPbReadyClick() {
+    if (!this.pbLocalStream || this.pbMyReady || this.pbPhase !== 'setup') return;
+    this.pbMyReady = true;
+    document.getElementById('pb-btn-ready').classList.add('hidden');
+    document.getElementById('pb-waiting-ready').classList.remove('hidden');
+    if (this.conn && this.conn.open) this.conn.send({ type: 'PB_READY' });
+    this.checkPbBothReady();
+  }
+
+  checkPbBothReady() {
+    if (!this.pbMyReady || !this.pbPartnerReady) return;
+    if (this.pbPhase !== 'setup') return;
+    if (this.isHost) {
+      if (this.conn && this.conn.open) this.conn.send({ type: 'PB_BEGIN' });
+      this.enterPbShootPhase();
+    }
+    // O guest aguarda o PB_BEGIN do host
+  }
+
+  enterPbShootPhase() {
+    if (this.pbPhase === 'shoot') return;
+    this.pbPhase = 'shoot';
+    this.showPbStep('shoot');
+
+    const selfVideo = document.getElementById('pb-video-self');
+    if (this.pbLocalStream && selfVideo.srcObject !== this.pbLocalStream) {
+      selfVideo.srcObject = this.pbLocalStream;
+    }
+    this.applyPbLiveFilterClasses();
+    this.renderPbThumbs();
+    this.updatePbStageLayout();
+    this.updatePhotoboothTexts();
+
+    if (this.pbSubMode === 'together') this.ensurePbMediaCall();
+
+    // Host dá o pontapé inicial na primeira foto
+    if (this.isHost) {
+      this.pbShotTimers.push(setTimeout(() => {
+        if (this.pbPhase !== 'shoot') return;
+        if (this.conn && this.conn.open) this.conn.send({ type: 'PB_SHOT', shotIdx: 0 });
+        this.runPbShot(0);
+      }, 1500));
+    }
+  }
+
+  // Ajusta o palco: "Juntinhos" mostra o vídeo do amor, "Surpresa" esconde
+  updatePbStageLayout() {
+    const remoteVideo = document.getElementById('pb-video-remote');
+    const waiting = document.getElementById('pb-video-waiting');
+    const hiddenCover = document.getElementById('pb-partner-hidden');
+    if (this.pbSubMode === 'blind') {
+      remoteVideo.classList.add('hidden');
+      waiting.classList.add('hidden');
+      hiddenCover.classList.remove('hidden');
+    } else {
+      remoteVideo.classList.remove('hidden');
+      hiddenCover.classList.add('hidden');
+      const hasStream = !!remoteVideo.srcObject;
+      waiting.classList.toggle('hidden', hasStream);
+    }
+  }
+
+  // ---------- Chamada de vídeo (modo Juntinhos) ----------
+
+  ensurePbMediaCall() {
+    if (this.gameMode !== 'photobooth' || this.pbSubMode !== 'together') return;
+    if (!this.isHost) return; // o host disca, o guest atende
+    if (!this.pbLocalStream || !this.peer || this.peer.destroyed) return;
+    if (this.pbMediaCall && this.pbMediaCall.open) return;
+    if (!this.conn || !this.conn.open) return;
+    try {
+      const call = this.peer.call(this.conn.peer, this.pbLocalStream);
+      this.attachPbMediaCall(call);
+    } catch (e) {
+      console.error("Falha ao ligar o vídeo:", e);
+    }
+  }
+
+  handleIncomingMediaCall(call) {
+    // Só atende chamadas durante o photobooth "Juntinhos"
+    if (this.gameMode !== 'photobooth' || this.pbSubMode !== 'together') {
+      try { call.close(); } catch (e) {}
+      return;
+    }
+    if (this.pbLocalStream) {
+      try {
+        call.answer(this.pbLocalStream);
+        this.attachPbMediaCall(call);
+      } catch (e) { console.error("Falha ao atender vídeo:", e); }
+    } else {
+      // Câmera ainda não liberou: guarda pra atender depois
+      this.pbPendingCall = call;
+    }
+  }
+
+  attachPbMediaCall(call) {
+    if (this.pbMediaCall && this.pbMediaCall !== call) {
+      try { this.pbMediaCall.close(); } catch (e) {}
+    }
+    this.pbMediaCall = call;
+
+    call.on('stream', (remoteStream) => {
+      const v = document.getElementById('pb-video-remote');
+      v.srcObject = remoteStream;
+      if (v.play) v.play().catch(() => {});
+      if (this.pbSubMode === 'together') {
+        document.getElementById('pb-video-waiting').classList.add('hidden');
+      }
+    });
+
+    call.on('close', () => {
+      if (this.pbMediaCall !== call) return;
+      if (this.gameMode === 'photobooth' && this.pbSubMode === 'together' && this.pbPhase !== 'idle') {
+        document.getElementById('pb-video-waiting').classList.remove('hidden');
+        if (this.isHost) setTimeout(() => this.ensurePbMediaCall(), 1500);
+      }
+    });
+
+    call.on('error', (err) => {
+      console.error("Erro na chamada de vídeo:", err);
+    });
+  }
+
+  // ---------- Sequência de fotos ----------
+
+  runPbShot(shotIdx) {
+    if (this.pbPhase !== 'shoot') return;
+    if (shotIdx < 0 || shotIdx >= this.PB_TOTAL_SHOTS) return;
+    this.pbShotIdx = shotIdx;
+    const ui = this.config[this.currentLang].ui;
+
+    document.getElementById('pb-shot-progress').textContent =
+      ui.pbShotProgress.replace('{num}', shotIdx + 1).replace('{total}', this.PB_TOTAL_SHOTS);
+    document.getElementById('pb-prompt-text').textContent = this.getPbPrompt(this.pbPromptIndices[shotIdx]);
+
+    this.clearPbShotTimers();
+    const seq = [
+      { t: 1800, run: () => this.showPbCount('3', false) },
+      { t: 2600, run: () => this.showPbCount('2', false) },
+      { t: 3400, run: () => this.showPbCount('1', false) },
+      { t: 4200, run: () => {
+          this.showPbCount(ui.pbSmile, true);
+          this.firePbFlash();
+          this.capturePbPhoto(shotIdx);
+        } }
+    ];
+    seq.forEach(s => this.pbShotTimers.push(setTimeout(s.run, s.t)));
+  }
+
+  showPbCount(text, isGo) {
+    const el = document.getElementById('pb-countdown');
+    el.textContent = text;
+    el.style.fontSize = isGo ? '2.4rem' : '';
+    el.classList.remove('hidden');
+    el.classList.remove('pop');
+    void el.offsetWidth; // reinicia a animação
+    el.classList.add('pop');
+    if (isGo) this.synth.playCountdownGo();
+    else this.synth.playCountdownTick();
+  }
+
+  firePbFlash() {
+    const flash = document.getElementById('pb-flash');
+    flash.classList.remove('on');
+    void flash.offsetWidth;
+    flash.classList.add('on');
+  }
+
+  capturePbPhoto(shotIdx) {
+    this.synth.playShutterSound();
+    let dataUrl = null;
+    try {
+      const video = document.getElementById('pb-video-self');
+      const vw = video.videoWidth, vh = video.videoHeight;
+      if (vw > 0 && vh > 0) {
+        // Recorte quadrado central, espelhado (igual ao preview)
+        const side = Math.min(vw, vh);
+        const sx = (vw - side) / 2, sy = (vh - side) / 2;
+        const out = Math.min(side, 800);
+        const c = document.createElement('canvas');
+        c.width = out; c.height = out;
+        const ctx = c.getContext('2d');
+        ctx.translate(out, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, sx, sy, side, side, 0, 0, out, out);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.applyPbPixelFilter(ctx, out, out);
+        dataUrl = c.toDataURL('image/jpeg', 0.85);
+      }
+    } catch (e) {
+      console.error("Falha na captura:", e);
+    }
+
+    this.pbMyShots[shotIdx] = dataUrl;
+    this.updatePbThumb(shotIdx);
+    if (this.conn && this.conn.open) {
+      this.conn.send({ type: 'PB_PHOTO', shotIdx: shotIdx, img: dataUrl });
+    }
+
+    const isLast = shotIdx === this.PB_TOTAL_SHOTS - 1;
+    if (isLast) {
+      this.pbShotTimers.push(setTimeout(() => this.enterPbCaptionPhase(), 1700));
+    } else if (this.isHost) {
+      // Aguarda a foto do parceiro chegar (com timeout de segurança)
+      this.clearPbShotTimeout();
+      this.pbShotTimeoutTimer = setTimeout(() => this.advancePbShot(), 12000);
+      this.maybeAdvancePbShot();
+    }
+  }
+
+  // Filtro aplicado pixel a pixel (mesmo resultado em qualquer navegador)
+  applyPbPixelFilter(ctx, w, h) {
+    if (this.pbFilter === 'none') return;
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      let r = d[i], g = d[i + 1], b = d[i + 2];
+      if (this.pbFilter === 'bw') {
+        const l = 0.299 * r + 0.587 * g + 0.114 * b;
+        const c = (l - 128) * 1.1 + 134;
+        r = c; g = c; b = c;
+      } else if (this.pbFilter === 'vintage') {
+        const sr = 0.393 * r + 0.769 * g + 0.189 * b;
+        const sg = 0.349 * r + 0.686 * g + 0.168 * b;
+        const sb = 0.272 * r + 0.534 * g + 0.131 * b;
+        r = r * 0.38 + sr * 0.62 + 6;
+        g = g * 0.38 + sg * 0.62 + 2;
+        b = b * 0.38 + sb * 0.62 - 6;
+      } else if (this.pbFilter === 'pink') {
+        const l = 0.299 * r + 0.587 * g + 0.114 * b;
+        r = (r * 0.72 + l * 0.28) * 1.08 + 20;
+        g = (g * 0.72 + l * 0.28) * 0.97 + 6;
+        b = (b * 0.72 + l * 0.28) + 14;
+      }
+      d[i] = r < 0 ? 0 : r > 255 ? 255 : r;
+      d[i + 1] = g < 0 ? 0 : g > 255 ? 255 : g;
+      d[i + 2] = b < 0 ? 0 : b > 255 ? 255 : b;
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  applyPbLiveFilterClasses() {
+    const cls = { vintage: 'pbf-vintage', pink: 'pbf-pink', bw: 'pbf-bw' }[this.pbFilter];
+    ['pb-video-setup', 'pb-video-self', 'pb-video-remote'].forEach(id => {
+      const v = document.getElementById(id);
+      if (!v) return;
+      v.classList.remove('pbf-vintage', 'pbf-pink', 'pbf-bw');
+      if (cls) v.classList.add(cls);
+    });
+  }
+
+  renderPbThumbs() {
+    const wrap = document.getElementById('pb-thumbs');
+    wrap.innerHTML = "";
+    for (let i = 0; i < this.PB_TOTAL_SHOTS; i++) {
+      const d = document.createElement('div');
+      d.className = 'pb-thumb';
+      d.id = `pb-thumb-${i}`;
+      d.textContent = '🐾';
+      wrap.appendChild(d);
+    }
+  }
+
+  updatePbThumb(i) {
+    const d = document.getElementById(`pb-thumb-${i}`);
+    if (!d) return;
+    const mine = this.pbMyShots[i];
+    if (mine && !d.querySelector('img')) {
+      d.textContent = "";
+      const img = document.createElement('img');
+      img.src = mine;
+      d.appendChild(img);
+      d.classList.add('filled');
+    }
+    let badge = d.querySelector('.pb-thumb-badge');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'pb-thumb-badge';
+      d.appendChild(badge);
+    }
+    if (this.pbSubMode === 'blind') {
+      badge.textContent = this.pbTheirShots[i] ? '🙈' : '';
+    } else {
+      badge.textContent = this.pbTheirShots[i] ? '💖' : (mine ? '⏳' : '');
+    }
+  }
+
+  // Host: avança quando as duas fotos da rodada chegaram
+  maybeAdvancePbShot() {
+    if (!this.isHost || this.pbPhase !== 'shoot') return;
+    const i = this.pbShotIdx;
+    if (i >= this.PB_TOTAL_SHOTS - 1) return;
+    if (!this.pbMyShots[i] || !this.pbTheirShots[i]) return;
+    if (this.pbAdvanceTimer) return;
+    this.clearPbShotTimeout();
+    this.pbAdvanceTimer = setTimeout(() => {
+      this.pbAdvanceTimer = null;
+      this.advancePbShot();
+    }, 1300);
+  }
+
+  advancePbShot() {
+    if (!this.isHost || this.pbPhase !== 'shoot') return;
+    this.clearPbShotTimeout();
+    if (this.pbAdvanceTimer) { clearTimeout(this.pbAdvanceTimer); this.pbAdvanceTimer = null; }
+    const next = this.pbShotIdx + 1;
+    if (next >= this.PB_TOTAL_SHOTS) return;
+    if (this.conn && this.conn.open) this.conn.send({ type: 'PB_SHOT', shotIdx: next });
+    this.runPbShot(next);
+  }
+
+  // ---------- Recadinho ----------
+
+  enterPbCaptionPhase() {
+    if (this.pbPhase !== 'shoot') return;
+    this.pbPhase = 'caption';
+    this.showPbStep('caption');
+    setTimeout(() => {
+      const input = document.getElementById('pb-caption-input');
+      if (input && this.pbPhase === 'caption') input.focus();
+    }, 350);
+  }
+
+  submitPbCaption(text) {
+    if (this.pbPhase !== 'caption' || this.pbMyCaption !== null) return;
+    this.pbMyCaption = (text || "").slice(0, 50);
+    if (this.conn && this.conn.open) {
+      this.conn.send({ type: 'PB_CAPTION', text: this.pbMyCaption });
+    }
+    document.getElementById('pb-caption-form').classList.add('hidden');
+    document.getElementById('pb-waiting-caption').classList.remove('hidden');
+    this.maybePbReveal();
+  }
+
+  maybePbReveal() {
+    if (this.pbPhase !== 'caption') return;
+    if (this.pbMyCaption === null || this.pbTheirCaption === null) return;
+    // Alguma foto do amor ainda em trânsito? Espera um tiquinho.
+    const missing = this.pbTheirShots.some(s => !s);
+    if (missing && this.pbRevealRetries < 5) {
+      this.pbRevealRetries++;
+      setTimeout(() => this.maybePbReveal(), 1400);
+      return;
+    }
+    this.enterPbRevealPhase();
+  }
+
+  // ---------- Revelação da tirinha ----------
+
+  async enterPbRevealPhase() {
+    if (this.pbPhase === 'reveal') return;
+    this.pbPhase = 'reveal';
+    const ui = this.config[this.currentLang].ui;
+    const isBlind = this.pbSubMode === 'blind';
+
+    this.showPbStep('reveal');
+    document.getElementById('lbl-pb-reveal-title').textContent = isBlind ? ui.pbRevealTitleBlind : ui.pbRevealTitle;
+    document.getElementById('lbl-pb-reveal-desc').textContent = ui.pbLoadingStrip;
+    document.getElementById('pb-btn-again').classList.toggle('hidden', !this.isHost);
+    document.getElementById('pb-guest-wait-note').classList.toggle('hidden', this.isHost);
+
+    try {
+      await this.buildPbStrip();
+      document.getElementById('pb-strip-img').src = this.pbStripCanvas.toDataURL('image/jpeg', 0.92);
+      document.getElementById('lbl-pb-reveal-desc').textContent = isBlind ? ui.pbRevealDescBlind : ui.pbRevealDesc;
+
+      if (isBlind) {
+        this.setupPbStripCovers();
+        setTimeout(() => this.playPbRevealAnimation(), 700);
+      } else {
+        document.getElementById('pb-strip-covers').innerHTML = "";
+        this.synth.playFanfareSound();
+        this.canvas.spawnBurst(window.innerWidth / 2, window.innerHeight / 2, 30);
+      }
+    } catch (e) {
+      console.error("Erro ao montar a tirinha:", e);
+      document.getElementById('lbl-pb-reveal-desc').textContent = "😿 " + (e && e.message ? e.message : "erro");
+    }
+  }
+
+  // RNG com semente (mulberry32) — a tirinha sai IGUAL nos dois lados
+  pbRandom(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  loadPbImage(src) {
+    return new Promise((resolve) => {
+      if (!src) return resolve(null);
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+  }
+
+  roundRectPath(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  drawPbHeartShape(ctx, x, y, size) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + size / 4);
+    ctx.quadraticCurveTo(x, y, x + size / 2, y);
+    ctx.quadraticCurveTo(x + size, y, x + size, y + size / 3);
+    ctx.quadraticCurveTo(x + size, y + size * 2 / 3, x + size / 2, y + size);
+    ctx.quadraticCurveTo(x, y + size * 2 / 3, x, y + size / 3);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  drawPbPaw(ctx, cx, cy, size, rot = 0) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    ctx.beginPath();
+    ctx.ellipse(0, size * 0.1, size * 0.4, size * 0.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const toe = size * 0.15;
+    [[-size * 0.35, -size * 0.1, -Math.PI / 6],
+     [-size * 0.12, -size * 0.3, -Math.PI / 12],
+     [size * 0.12, -size * 0.3, Math.PI / 12],
+     [size * 0.35, -size * 0.1, Math.PI / 6]].forEach(([tx, ty, tr]) => {
+      ctx.beginPath();
+      ctx.ellipse(tx, ty, toe, toe * 1.3, tr, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  drawPbCatFace(ctx, cx, cy, size) {
+    // Orelhas
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.42, cy - size * 0.1);
+    ctx.lineTo(cx - size * 0.55, cy - size * 0.55);
+    ctx.lineTo(cx - size * 0.12, cy - size * 0.38);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + size * 0.42, cy - size * 0.1);
+    ctx.lineTo(cx + size * 0.55, cy - size * 0.55);
+    ctx.lineTo(cx + size * 0.12, cy - size * 0.38);
+    ctx.closePath();
+    ctx.fill();
+    // Rosto
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.48, 0, Math.PI * 2);
+    ctx.fill();
+    // Olhinhos fechados felizes
+    ctx.strokeStyle = '#831843';
+    ctx.lineWidth = Math.max(2, size * 0.06);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.26, cy - size * 0.02);
+    ctx.quadraticCurveTo(cx - size * 0.16, cy + size * 0.1, cx - size * 0.06, cy - size * 0.02);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx + size * 0.06, cy - size * 0.02);
+    ctx.quadraticCurveTo(cx + size * 0.16, cy + size * 0.1, cx + size * 0.26, cy - size * 0.02);
+    ctx.stroke();
+    // Nariz
+    ctx.fillStyle = '#fbcfe8';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + size * 0.16);
+    ctx.lineTo(cx - size * 0.07, cy + size * 0.06);
+    ctx.lineTo(cx + size * 0.07, cy + size * 0.06);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  drawPbPhoto(ctx, img, x, y, size) {
+    ctx.save();
+    this.roundRectPath(ctx, x, y, size, size, 14);
+    ctx.clip();
+    if (img) {
+      ctx.drawImage(img, x, y, size, size);
+    } else {
+      ctx.fillStyle = '#fce7f3';
+      ctx.fillRect(x, y, size, size);
+      ctx.font = '110px "Outfit", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🙈', x + size / 2, y + size / 2 + 40);
+    }
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(236, 72, 153, 0.35)';
+    ctx.lineWidth = 3;
+    this.roundRectPath(ctx, x, y, size, size, 14);
+    ctx.stroke();
+  }
+
+  getPbDateStr() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+  }
+
+  async buildPbStrip() {
+    if (this.pbBuildingStrip) return;
+    this.pbBuildingStrip = true;
+    try {
+      const W = 1000, headerH = 190, rowH = 560, footerH = 300;
+      const N = this.PB_TOTAL_SHOTS;
+      const H = headerH + N * rowH + footerH;
+      this.pbStripGeom = { W, H, headerH, rowH };
+
+      const rng = this.pbRandom(this.pbSeed);
+      const canvas = document.createElement('canvas');
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+
+      // Garante as fontes fofas no canvas
+      try {
+        await Promise.race([
+          Promise.all([
+            document.fonts.load('700 74px "Dancing Script"'),
+            document.fonts.load('700 46px "Dancing Script"'),
+            document.fonts.load('800 26px "Outfit"'),
+            document.fonts.load('italic 600 27px "Outfit"')
+          ]),
+          new Promise(r => setTimeout(r, 1600))
+        ]);
+      } catch (e) { /* segue com a fonte padrão */ }
+
+      // Fundo rosinha degradê
+      const bg = ctx.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, '#fdf2f8');
+      bg.addColorStop(0.5, '#fce7f3');
+      bg.addColorStop(1, '#fbcfe8');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+
+      // Confete de corações e patinhas (semeado = igual nos dois lados)
+      for (let i = 0; i < 60; i++) {
+        const x = rng() * W, y = rng() * H, s = 14 + rng() * 22;
+        ctx.globalAlpha = 0.07 + rng() * 0.09;
+        ctx.fillStyle = rng() < 0.5 ? '#ec4899' : '#f472b6';
+        if (rng() < 0.45) this.drawPbPaw(ctx, x, y, s, rng() * Math.PI * 2);
+        else this.drawPbHeartShape(ctx, x, y, s);
+      }
+      ctx.globalAlpha = 1;
+
+      // Cabeçalho com os nomes
+      const p1 = this.p1Name || 'Amor 1';
+      const p2 = this.p2Name || 'Amor 2';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#9d174d';
+      ctx.font = '700 74px "Dancing Script", cursive';
+      ctx.fillText(`${p1} 💖 ${p2}`, W / 2, 106, 940);
+      ctx.font = '800 26px "Outfit", sans-serif';
+      ctx.fillStyle = '#be185d';
+      ctx.fillText(`· ${this.getPbDateStr()} ·`, W / 2, 154);
+
+      // Fotos: host (P1) sempre à esquerda, guest (P2) à direita
+      const leftShots = this.isHost ? this.pbMyShots : this.pbTheirShots;
+      const rightShots = this.isHost ? this.pbTheirShots : this.pbMyShots;
+      const leftImgs = await Promise.all(leftShots.map(s => this.loadPbImage(s)));
+      const rightImgs = await Promise.all(rightShots.map(s => this.loadPbImage(s)));
+
+      for (let i = 0; i < N; i++) {
+        const cy = headerH + i * rowH + rowH / 2;
+        const rot = (rng() - 0.5) * 0.055;
+        ctx.save();
+        ctx.translate(W / 2, cy);
+        ctx.rotate(rot);
+
+        // Cartão estilo polaroid
+        ctx.shadowColor = 'rgba(157, 23, 77, 0.3)';
+        ctx.shadowBlur = 26;
+        ctx.shadowOffsetY = 10;
+        ctx.fillStyle = '#ffffff';
+        this.roundRectPath(ctx, -440, -250, 880, 500, 20);
+        ctx.fill();
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+
+        // As duas fotos, lado a lado
+        this.drawPbPhoto(ctx, leftImgs[i], -415, -225, 400);
+        this.drawPbPhoto(ctx, rightImgs[i], 15, -225, 400);
+
+        // Coraçãozinho entre as fotos
+        ctx.font = '42px "Outfit", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('💖', 0, -10);
+
+        // A pose da rodada
+        ctx.font = 'italic 600 27px "Outfit", sans-serif';
+        ctx.fillStyle = '#be185d';
+        ctx.fillText(this.getPbPrompt(this.pbPromptIndices[i]), 0, 232, 820);
+
+        // Patinhas nos cantos do cartão
+        ctx.fillStyle = '#f9a8d4';
+        this.drawPbPaw(ctx, -406, 218, 22, -0.4);
+        this.drawPbPaw(ctx, 406, 218, 22, 0.4);
+
+        ctx.restore();
+      }
+
+      // Rodapé: recadinhos + gatinhos
+      let fy = headerH + N * rowH + 48;
+      ctx.textAlign = 'center';
+      const capLeft = this.isHost ? this.pbMyCaption : this.pbTheirCaption;
+      const capRight = this.isHost ? this.pbTheirCaption : this.pbMyCaption;
+      const capLines = [];
+      if (capLeft) capLines.push({ text: capLeft, name: p1 });
+      if (capRight) capLines.push({ text: capRight, name: p2 });
+      ctx.fillStyle = '#9d174d';
+      ctx.font = '700 46px "Dancing Script", cursive';
+      for (const line of capLines) {
+        ctx.fillText(`“${line.text}” — ${line.name}`, W / 2, fy, 920);
+        fy += 62;
+      }
+
+      const catY = H - 96;
+      ctx.fillStyle = '#ec4899';
+      this.drawPbCatFace(ctx, 110, catY, 56);
+      ctx.fillStyle = '#ec4899';
+      this.drawPbCatFace(ctx, W - 110, catY, 56);
+      ctx.fillStyle = '#f472b6';
+      for (let px = 220; px <= W - 220; px += 72) {
+        this.drawPbPaw(ctx, px, catY + ((px / 72) % 2 ? -8 : 10), 15, ((px / 72) % 5) * 0.2);
+      }
+
+      ctx.fillStyle = '#be185d';
+      ctx.font = '800 22px "Outfit", sans-serif';
+      const branding = `😺 ${this.config[this.currentLang].ui.pbStripBranding} 😺`;
+      ctx.fillText(branding.toUpperCase(), W / 2, H - 24);
+
+      this.pbStripCanvas = canvas;
+    } finally {
+      this.pbBuildingStrip = false;
+    }
+  }
+
+  // Cobre cada fileira com um "🙈" que levanta na revelação (modo Surpresa)
+  setupPbStripCovers() {
+    const covers = document.getElementById('pb-strip-covers');
+    covers.innerHTML = "";
+    const g = this.pbStripGeom;
+    if (!g) return;
+    for (let i = 0; i < this.PB_TOTAL_SHOTS; i++) {
+      const d = document.createElement('div');
+      d.className = 'pb-cover';
+      d.style.top = ((g.headerH + i * g.rowH + 14) / g.H * 100) + '%';
+      d.style.height = ((g.rowH - 28) / g.H * 100) + '%';
+      d.textContent = '🙈';
+      covers.appendChild(d);
+    }
+  }
+
+  playPbRevealAnimation() {
+    const wrap = document.getElementById('pb-strip-wrap');
+    const covers = [...document.querySelectorAll('#pb-strip-covers .pb-cover')];
+    covers.forEach((cover, i) => {
+      this.pbRevealTimers.push(setTimeout(() => {
+        // Acompanha a revelação rolando a tirinha
+        try { wrap.scrollTo({ top: Math.max(0, cover.offsetTop - 60), behavior: 'smooth' }); } catch (e) {}
+        cover.classList.add('lifted');
+        this.synth.playDevelopSound();
+        if (i === covers.length - 1) {
+          this.pbRevealTimers.push(setTimeout(() => {
+            this.synth.playFanfareSound();
+            this.canvas.spawnBurst(window.innerWidth / 2, window.innerHeight / 2, 30);
+            try { wrap.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
+          }, 900));
+        }
+      }, 900 + i * 1000));
+    });
+  }
+
+  downloadPbStrip() {
+    if (!this.pbStripCanvas) return;
+    const clean = (s) => (s || 'amor').replace(/[^\p{L}\p{N}]+/gu, '-');
+    const fileName = `photobooth-${clean(this.p1Name)}-${clean(this.p2Name)}-${this.getPbDateStr().replace(/\./g, '-')}.jpg`;
+    this.pbStripCanvas.toBlob(async (blob) => {
+      if (!blob) return;
+      // No celular, a folha de compartilhar salva direto na galeria
+      const file = new File([blob], fileName, { type: 'image/jpeg' });
+      const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+      if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] });
+          return;
+        } catch (e) { /* cancelou → cai no download normal */ }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }, 'image/jpeg', 0.92);
+  }
+
+  // Host: nova rodada com novas poses (mantém câmera ligada)
+  restartPhotobooth() {
+    if (!this.isHost) return;
+    this.pbPromptIndices = this.pickPbPromptIndices(this.PB_TOTAL_SHOTS);
+    this.pbSeed = Math.floor(Math.random() * 1e9) + 1;
+    if (this.conn && this.conn.open) {
+      this.conn.send({ type: 'PB_RESTART', pbPromptIndices: this.pbPromptIndices, pbSeed: this.pbSeed });
+    }
+    this.resetPbRound();
+    this.enterPbShootPhase();
+  }
+
+  // ---------- Limpeza ----------
+
+  clearPbShotTimers() {
+    this.pbShotTimers.forEach(t => clearTimeout(t));
+    this.pbShotTimers = [];
+  }
+
+  clearPbShotTimeout() {
+    if (this.pbShotTimeoutTimer) {
+      clearTimeout(this.pbShotTimeoutTimer);
+      this.pbShotTimeoutTimer = null;
+    }
+  }
+
+  clearPbTimers() {
+    this.clearPbShotTimers();
+    this.clearPbShotTimeout();
+    if (this.pbAdvanceTimer) { clearTimeout(this.pbAdvanceTimer); this.pbAdvanceTimer = null; }
+    this.pbRevealTimers.forEach(t => clearTimeout(t));
+    this.pbRevealTimers = [];
+  }
+
+  stopPhotoboothMedia() {
+    this.clearPbTimers();
+    if (this.pbMediaCall) {
+      try { this.pbMediaCall.close(); } catch (e) {}
+      this.pbMediaCall = null;
+    }
+    if (this.pbPendingCall) {
+      try { this.pbPendingCall.close(); } catch (e) {}
+      this.pbPendingCall = null;
+    }
+    if (this.pbLocalStream) {
+      this.pbLocalStream.getTracks().forEach(t => { try { t.stop(); } catch (e) {} });
+      this.pbLocalStream = null;
+    }
+    ['pb-video-setup', 'pb-video-self', 'pb-video-remote'].forEach(id => {
+      const v = document.getElementById(id);
+      if (v) v.srcObject = null;
+    });
+    this.pbMyReady = false;
+    this.pbPartnerReady = false;
+  }
+
   // Volta ambos os jogadores ao lobby conectado (sem derrubar a conexão),
   // permitindo escolher outra categoria e jogar novamente.
   returnToLobby() {
     const langConfig = this.config[this.currentLang];
+
+    // Encerra qualquer sessão de photobooth (câmera, chamada, timers)
+    this.stopPhotoboothMedia();
+    this.pbPhase = 'idle';
 
     // Reseta estado de jogo
     this.currentQuestionIdx = 0;
@@ -2383,9 +3562,10 @@ class AffinityApp {
       `;
     }
 
-    // O seletor de categoria reflete o modo atual (Blind Ranking)
+    // Os seletores refletem o modo atual (Blind Ranking / Photobooth)
     this.updateCategoryPickerVisibility();
     this.renderCategoryPicker();
+    this.updatePbPickerVisibility();
   }
 }
 

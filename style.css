@@ -1289,7 +1289,7 @@ form {
 
 .game-mode-options {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
 }
 
@@ -1970,4 +1970,371 @@ form {
   .battle-avatar { font-size: 1.8rem; }
   .battle-name { font-size: 0.72rem; }
   .battle-vs { font-size: 1rem; }
+}
+
+/* ==========================================================================
+   PHOTOBOOTH — cabine de fotos do casal 📸🐱
+   ========================================================================== */
+
+/* Seletor de sub-modo (Juntinhos / Surpresa) na tela inicial */
+.pb-submode-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.pb-mode-desc {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+  line-height: 1.2;
+}
+
+.pb-filter-label {
+  margin-top: 14px;
+}
+
+.pb-filter-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+/* Cartões / etapas do photobooth */
+.pb-card {
+  padding: 30px 25px;
+  text-align: center;
+}
+
+.pb-step {
+  display: none;
+}
+
+.pb-step.active {
+  display: block;
+  animation: categoryFadeIn 0.35s ease both;
+}
+
+.pb-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: linear-gradient(to right, #ffffff, #f472b6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 6px;
+}
+
+.pb-desc {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
+
+/* Molduras de vídeo (sempre quadradas, igual à foto final) */
+.pb-video-frame {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+  border: 3px solid rgba(244, 114, 182, 0.55);
+  box-shadow: 0 0 20px rgba(236, 72, 153, 0.25);
+  background: #1a0b2e;
+}
+
+.pb-video-frame video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pb-mirror {
+  transform: scaleX(-1);
+}
+
+.pb-single {
+  max-width: 260px;
+  margin: 0 auto 18px;
+}
+
+.pb-video-label {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(18, 8, 31, 0.65);
+  backdrop-filter: blur(4px);
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  z-index: 3;
+}
+
+/* Filtros ao vivo (aproximação CSS do filtro aplicado na captura) */
+.pbf-vintage { filter: sepia(0.5) saturate(1.15) contrast(1.03) brightness(1.02); }
+.pbf-pink    { filter: saturate(0.8) brightness(1.07) sepia(0.2) hue-rotate(-18deg); }
+.pbf-bw      { filter: grayscale(1) contrast(1.08); }
+
+/* Palco da sessão de fotos */
+.pb-stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* Cobertura "segredo" / "conectando" do parceiro */
+.pb-partner-hidden {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: radial-gradient(circle at 50% 40%, #3b1053 0%, #1a0b2e 100%);
+  z-index: 2;
+  padding: 10px;
+}
+
+.pb-partner-hidden.hidden {
+  display: none;
+}
+
+.pb-mystery-cat {
+  font-size: 2.6rem;
+  line-height: 1;
+  animation: pbFloat 2.4s ease-in-out infinite;
+}
+
+@keyframes pbFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+
+.pb-hidden-text {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.25;
+}
+
+/* Contagem regressiva gigante */
+.pb-countdown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 5.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 0 30px rgba(236, 72, 153, 0.95), 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 6;
+  pointer-events: none;
+}
+
+.pb-countdown.hidden {
+  display: none;
+}
+
+.pb-countdown.pop {
+  animation: pbCountPop 0.75s ease both;
+}
+
+@keyframes pbCountPop {
+  0%   { transform: scale(1.9); opacity: 0; }
+  30%  { transform: scale(1);   opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: scale(0.92); opacity: 0; }
+}
+
+/* Flash da foto */
+.pb-flash {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 7;
+  border-radius: var(--border-radius-md);
+}
+
+.pb-flash.on {
+  animation: pbFlash 0.5s ease-out both;
+}
+
+@keyframes pbFlash {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Banner de pose / progresso */
+.pb-prompt-banner {
+  margin-bottom: 14px;
+}
+
+.pb-shot-progress {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #f472b6;
+}
+
+.pb-prompt-text {
+  font-size: 1.22rem;
+  font-weight: 700;
+  margin-top: 4px;
+  min-height: 2.2rem;
+  color: var(--text-highlight);
+}
+
+/* Miniaturas de progresso (5 fotos) */
+.pb-thumbs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.pb-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  border: 2px dashed rgba(244, 114, 182, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  color: rgba(244, 114, 182, 0.55);
+  overflow: hidden;
+  position: relative;
+  background: rgba(255, 255, 255, 0.04);
+  transition: var(--transition-smooth);
+}
+
+.pb-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pb-thumb.filled {
+  border-style: solid;
+  border-color: rgba(244, 114, 182, 0.85);
+  box-shadow: 0 0 10px rgba(236, 72, 153, 0.35);
+}
+
+.pb-thumb-badge {
+  position: absolute;
+  bottom: 0;
+  right: 1px;
+  font-size: 0.68rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* Erro de câmera */
+.pb-cam-error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: var(--border-radius-md);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.pb-cam-error p {
+  font-size: 0.88rem;
+  margin-bottom: 10px;
+  color: var(--text-light);
+}
+
+.pb-cam-error.hidden {
+  display: none;
+}
+
+#pb-btn-ready:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  animation: none;
+}
+
+/* Recadinho */
+.pb-caption-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.pb-caption-actions .btn {
+  flex: 1;
+}
+
+/* Revelação da tirinha */
+.pb-strip-wrap {
+  max-height: 58vh;
+  overflow-y: auto;
+  border-radius: 12px;
+  margin: 6px auto 18px;
+  max-width: 330px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
+  scrollbar-width: thin;
+}
+
+.pb-strip-inner {
+  position: relative;
+  line-height: 0;
+}
+
+#pb-strip-img {
+  width: 100%;
+  display: block;
+}
+
+#pb-strip-covers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.pb-cover {
+  position: absolute;
+  left: 1.5%;
+  width: 97%;
+  background: linear-gradient(135deg, #3b1053 0%, #4a0c32 100%);
+  border: 2px dashed rgba(244, 114, 182, 0.5);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  line-height: 1;
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.pb-cover.lifted {
+  opacity: 0;
+  transform: translateY(-16px) scale(1.06);
+}
+
+.pb-reveal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Ajustes mobile */
+@media (max-width: 480px) {
+  .pb-card { padding: 22px 14px; }
+  .pb-countdown { font-size: 4rem; }
+  .pb-prompt-text { font-size: 1.05rem; }
+  .pb-thumb { width: 44px; height: 44px; }
+  .pb-strip-wrap { max-width: 290px; }
+  .pb-mode-desc { font-size: 0.62rem; }
 }

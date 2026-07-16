@@ -190,12 +190,37 @@
                 <span class="mode-icon">⚔️</span>
                 <span class="mode-name" id="lbl-mode-battle">Duo Battle</span>
               </div>
+              <div class="mode-option" data-mode="photobooth" id="mode-photobooth-btn">
+                <span class="mode-icon">📸</span>
+                <span class="mode-name" id="lbl-mode-photobooth">Photobooth</span>
+              </div>
             </div>
 
             <!-- Seletor de Categoria (apenas Blind Ranking) -->
             <div id="blind-category-picker" class="blind-category-picker hidden">
               <label class="category-picker-label" id="lbl-category-title">Escolha a Categoria:</label>
               <div id="category-options" class="category-options">
+                <!-- Gerado dinamicamente -->
+              </div>
+            </div>
+
+            <!-- Opções do Photobooth (sub-modo + filtro) -->
+            <div id="pb-options-picker" class="blind-category-picker hidden">
+              <label class="category-picker-label" id="lbl-pb-submode-title">Como vão tirar as fotos?</label>
+              <div class="pb-submode-options">
+                <div class="mode-option pb-submode-option active" data-pbmode="together" id="pb-mode-together-btn">
+                  <span class="mode-icon">💞</span>
+                  <span class="mode-name" id="lbl-pb-mode-together">Juntinhos</span>
+                  <span class="pb-mode-desc" id="lbl-pb-mode-together-desc">Vocês se veem ao vivo!</span>
+                </div>
+                <div class="mode-option pb-submode-option" data-pbmode="blind" id="pb-mode-blind-btn">
+                  <span class="mode-icon">🙈</span>
+                  <span class="mode-name" id="lbl-pb-mode-blind">Surpresa</span>
+                  <span class="pb-mode-desc" id="lbl-pb-mode-blind-desc">Só se veem no final!</span>
+                </div>
+              </div>
+              <label class="category-picker-label pb-filter-label" id="lbl-pb-filter-title">Filtro das Fotos:</label>
+              <div id="pb-filter-options" class="pb-filter-options">
                 <!-- Gerado dinamicamente -->
               </div>
             </div>
@@ -533,6 +558,134 @@
       </div>
     </section>
 
+    <!-- TELA 4: PHOTOBOOTH -->
+    <section id="screen-photobooth" class="screen">
+
+      <!-- Etapa 1: Checagem da Câmera -->
+      <div id="pb-step-setup" class="card glassmorphic pb-card pb-step active">
+        <div class="peeking-cat">
+          <svg viewBox="0 0 100 80" width="80" height="64">
+            <path d="M20 40 L10 10 L40 30 Z" fill="#ec4899" />
+            <path d="M23 38 L15 15 L37 30 Z" fill="#fbcfe8" />
+            <path d="M80 40 L90 10 L60 30 Z" fill="#ec4899" />
+            <path d="M77 38 L85 15 L63 30 Z" fill="#fbcfe8" />
+            <ellipse cx="50" cy="50" rx="35" ry="25" fill="#ec4899" />
+            <ellipse cx="38" cy="48" rx="4" ry="6" fill="#12081f" />
+            <circle cx="37" cy="46" r="1.5" fill="#ffffff" />
+            <ellipse cx="62" cy="48" rx="4" ry="6" fill="#12081f" />
+            <circle cx="61" cy="46" r="1.5" fill="#ffffff" />
+            <polygon points="50,53 47,50 53,50" fill="#fbcfe8" />
+            <line x1="25" y1="52" x2="5" y2="50" stroke="#fdf2f8" stroke-width="1.5" stroke-linecap="round" />
+            <line x1="25" y1="56" x2="3" y2="57" stroke="#fdf2f8" stroke-width="1.5" stroke-linecap="round" />
+            <line x1="75" y1="52" x2="95" y2="50" stroke="#fdf2f8" stroke-width="1.5" stroke-linecap="round" />
+            <line x1="75" y1="56" x2="97" y2="57" stroke="#fdf2f8" stroke-width="1.5" stroke-linecap="round" />
+            <ellipse cx="30" cy="72" rx="8" ry="6" fill="#ec4899" stroke="#12081f" stroke-width="1" />
+            <ellipse cx="70" cy="72" rx="8" ry="6" fill="#ec4899" stroke="#12081f" stroke-width="1" />
+          </svg>
+        </div>
+        <h2 class="pb-title" id="lbl-pb-setup-title">Ajeita a Câmera! 🐱</h2>
+        <p class="pb-desc" id="lbl-pb-setup-desc">Arruma o cabelo...</p>
+        <div class="pb-video-frame pb-single">
+          <video id="pb-video-setup" autoplay playsinline muted class="pb-mirror"></video>
+          <div class="pb-video-label" id="lbl-pb-you-setup">Você 💖</div>
+        </div>
+        <div id="pb-cam-error" class="pb-cam-error hidden">
+          <p id="lbl-pb-cam-error">Não consegui acessar sua câmera 😿</p>
+          <button type="button" id="pb-btn-retry-cam" class="btn btn-secondary">Tentar de Novo 🔄</button>
+        </div>
+        <button type="button" id="pb-btn-ready" class="btn btn-primary btn-pulse" disabled>Pode Vir! 📸</button>
+        <p id="pb-waiting-ready" class="mp-waiting-text hidden">Esperando seu amor... ⏳</p>
+      </div>
+
+      <!-- Etapa 2: Sessão de Fotos -->
+      <div id="pb-step-shoot" class="card glassmorphic pb-card pb-step">
+        <div class="pb-prompt-banner">
+          <span id="pb-shot-progress" class="pb-shot-progress">Foto 1 de 5</span>
+          <h2 id="pb-prompt-text" class="pb-prompt-text">...</h2>
+        </div>
+        <div class="pb-stage">
+          <div class="pb-video-frame" id="pb-frame-self">
+            <video id="pb-video-self" autoplay playsinline muted class="pb-mirror"></video>
+            <div class="pb-video-label" id="lbl-pb-you">Você 💖</div>
+          </div>
+          <div class="pb-video-frame" id="pb-frame-partner">
+            <video id="pb-video-remote" autoplay playsinline muted></video>
+            <div id="pb-video-waiting" class="pb-partner-hidden">
+              <div class="pb-mystery-cat">💞</div>
+              <p id="lbl-pb-video-connecting" class="pb-hidden-text">Conectando o vídeo...</p>
+            </div>
+            <div id="pb-partner-hidden" class="pb-partner-hidden hidden">
+              <div class="pb-mystery-cat">🙈</div>
+              <p id="lbl-pb-partner-hidden" class="pb-hidden-text">Segredo até o final!</p>
+            </div>
+            <div class="pb-video-label" id="lbl-pb-partner">Seu Amor 💕</div>
+          </div>
+          <div id="pb-countdown" class="pb-countdown hidden">3</div>
+          <div id="pb-flash" class="pb-flash"></div>
+        </div>
+        <div id="pb-thumbs" class="pb-thumbs">
+          <!-- Gerado dinamicamente -->
+        </div>
+      </div>
+
+      <!-- Etapa 3: Recadinho -->
+      <div id="pb-step-caption" class="card glassmorphic pb-card pb-step">
+        <div class="heart-pulse-container">
+          <div class="heart-pulse-small">💌</div>
+        </div>
+        <h2 class="pb-title" id="lbl-pb-caption-title">Escreve um Recadinho Fofo 💌</h2>
+        <p class="pb-desc" id="lbl-pb-caption-desc">Ele vai sair escrito na tirinha!</p>
+        <div id="pb-caption-form">
+          <div class="input-group">
+            <input type="text" id="pb-caption-input" maxlength="50" placeholder="te amo bebê..." autocomplete="off">
+          </div>
+          <div class="pb-caption-actions">
+            <button type="button" id="pb-btn-caption-done" class="btn btn-primary">Pronto! 💌</button>
+            <button type="button" id="pb-btn-caption-skip" class="btn btn-outline">Pular ✨</button>
+          </div>
+        </div>
+        <p id="pb-waiting-caption" class="mp-waiting-text hidden">Esperando o recadinho... ⏳</p>
+      </div>
+
+      <!-- Etapa 4: Revelação da Tirinha -->
+      <div id="pb-step-reveal" class="card glassmorphic pb-card pb-step">
+        <div class="peeking-cat">
+          <svg viewBox="0 0 100 80" width="80" height="64">
+            <path d="M20 40 L10 10 L40 30 Z" fill="#ec4899" />
+            <path d="M23 38 L15 15 L37 30 Z" fill="#fbcfe8" />
+            <path d="M80 40 L90 10 L60 30 Z" fill="#ec4899" />
+            <path d="M77 38 L85 15 L63 30 Z" fill="#fbcfe8" />
+            <ellipse cx="50" cy="50" rx="35" ry="25" fill="#ec4899" />
+            <ellipse cx="38" cy="48" rx="4" ry="6" fill="#12081f" />
+            <circle cx="37" cy="46" r="1.5" fill="#ffffff" />
+            <ellipse cx="62" cy="48" rx="4" ry="6" fill="#12081f" />
+            <circle cx="61" cy="46" r="1.5" fill="#ffffff" />
+            <polygon points="50,53 47,50 53,50" fill="#fbcfe8" />
+            <line x1="25" y1="52" x2="5" y2="50" stroke="#fdf2f8" stroke-width="1.5" stroke-linecap="round" />
+            <line x1="25" y1="56" x2="3" y2="57" stroke="#fdf2f8" stroke-width="1.5" stroke-linecap="round" />
+            <line x1="75" y1="52" x2="95" y2="50" stroke="#fdf2f8" stroke-width="1.5" stroke-linecap="round" />
+            <line x1="75" y1="56" x2="97" y2="57" stroke="#fdf2f8" stroke-width="1.5" stroke-linecap="round" />
+            <ellipse cx="30" cy="72" rx="8" ry="6" fill="#ec4899" stroke="#12081f" stroke-width="1" />
+            <ellipse cx="70" cy="72" rx="8" ry="6" fill="#ec4899" stroke="#12081f" stroke-width="1" />
+          </svg>
+        </div>
+        <h2 class="pb-title" id="lbl-pb-reveal-title">Nossa Tirinha! 💖📸</h2>
+        <p class="pb-desc" id="lbl-pb-reveal-desc">Olha só que casal...</p>
+        <div id="pb-strip-wrap" class="pb-strip-wrap">
+          <div class="pb-strip-inner">
+            <img id="pb-strip-img" alt="Photo strip 💖">
+            <div id="pb-strip-covers"></div>
+          </div>
+        </div>
+        <div class="pb-reveal-actions">
+          <button type="button" id="pb-btn-download" class="btn btn-primary btn-pulse">Salvar Foto 📥</button>
+          <button type="button" id="pb-btn-again" class="btn btn-secondary">Mais uma Rodada! 🔄</button>
+          <button type="button" id="pb-btn-lobby" class="btn btn-outline">Voltar ao Lobby 🏠</button>
+        </div>
+        <p id="pb-guest-wait-note" class="mp-waiting-text hidden">O host decide a próxima rodada 😺</p>
+      </div>
+    </section>
+
   </main>
 
   <!-- Caixa de Chat (Multiplayer) -->
@@ -564,9 +717,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="config.js?v=5"></script>
-  <script src="questions.js?v=5"></script>
-  <script src="blind_ranking.js?v=5"></script>
-  <script src="app.js?v=5"></script>
+  <script src="config.js?v=6"></script>
+  <script src="questions.js?v=6"></script>
+  <script src="blind_ranking.js?v=6"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
