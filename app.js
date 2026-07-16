@@ -2762,6 +2762,10 @@ class AffinityApp {
     setText('pb-btn-caption-done', ui.pbBtnCaptionDone);
     setText('pb-btn-caption-skip', ui.pbBtnCaptionSkip);
     setText('pb-waiting-caption', ui.pbWaitingCaption);
+    setText('lbl-pb-caption-or-pick', ui.pbCaptionOrPick);
+    if (this.pbPhase === 'caption' && this.pbMyCaption === null) {
+      this.renderPbCaptionSuggestions(); // re-sorteia no idioma novo
+    }
 
     // Etapa: revelação
     const isBlind = this.pbSubMode === 'blind';
@@ -3171,10 +3175,41 @@ class AffinityApp {
     if (this.pbPhase !== 'shoot') return;
     this.pbPhase = 'caption';
     this.showPbStep('caption');
-    setTimeout(() => {
-      const input = document.getElementById('pb-caption-input');
-      if (input && this.pbPhase === 'caption') input.focus();
-    }, 350);
+    // Sem foco automático: no celular o teclado cobriria as sugestões prontas
+    this.renderPbCaptionSuggestions();
+  }
+
+  // Sorteia 4 recadinhos prontos + botão de embaralhar
+  renderPbCaptionSuggestions() {
+    const container = document.getElementById('pb-caption-suggestions');
+    if (!container) return;
+    const ui = this.config[this.currentLang].ui;
+    const pool = this.config[this.currentLang].pbCaptionSuggestions || [];
+    const picks = [...pool].sort(() => Math.random() - 0.5).slice(0, 4);
+
+    container.innerHTML = "";
+    picks.forEach(text => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'pb-caption-chip';
+      chip.textContent = text;
+      chip.addEventListener('click', () => {
+        this.synth.playClickSound();
+        const input = document.getElementById('pb-caption-input');
+        if (input) input.value = text.slice(0, 50);
+      });
+      container.appendChild(chip);
+    });
+
+    const shuffle = document.createElement('button');
+    shuffle.type = 'button';
+    shuffle.className = 'pb-caption-chip pb-caption-shuffle';
+    shuffle.textContent = ui.pbCaptionShuffle;
+    shuffle.addEventListener('click', () => {
+      this.synth.playClickSound();
+      this.renderPbCaptionSuggestions();
+    });
+    container.appendChild(shuffle);
   }
 
   submitPbCaption(text) {

@@ -144,8 +144,34 @@ const coupleConfig = {
       pbFrameClassic: "Rosinha",
       pbFrameKitties: "Gatinhos",
       pbFrameNight: "Noturna",
-      pbFrameFilm: "Filme"
+      pbFrameFilm: "Filme",
+      pbCaptionOrPick: "Ou toca numa prontinha ✨",
+      pbCaptionShuffle: "🎲 outras"
     },
+
+    // Recadinhos prontos do Photobooth (cada idioma tem seu próprio pool)
+    pbCaptionSuggestions: [
+      "te amo até a lua e voltando 🌙",
+      "meu lugar favorito é do seu lado",
+      "juntinhos mesmo longe 💕",
+      "você é meu pensamento favorito",
+      "meu amor favorito do mundo todo",
+      "saudade apertada de você",
+      "meu coração mora aí com você",
+      "a distância não sabe de nada 💪",
+      "miau significa te amo em gato 🐱",
+      "sorte a minha te encontrar",
+      "meu bebê lindo pra sempre",
+      "contando os dias pra te abraçar",
+      "você + eu = tudo certo",
+      "o amor não tem fuso horário ⏰",
+      "gatinhos e você: meus favoritos 🐱",
+      "prometo te amar em todas as fotos",
+      "essa foto vai pra parede 📌",
+      "casal mais fofo do photobooth 😎",
+      "te amo mais que ontem, menos que amanhã",
+      "um dia sem te ver = um dia perdido"
+    ],
 
     // Poses do Photobooth (sincronizadas por índice com o inglês)
     pbPrompts: [
@@ -356,8 +382,34 @@ const coupleConfig = {
       pbFrameClassic: "Pink",
       pbFrameKitties: "Kitties",
       pbFrameNight: "Night Sky",
-      pbFrameFilm: "Film"
+      pbFrameFilm: "Film",
+      pbCaptionOrPick: "Or tap a ready-made one ✨",
+      pbCaptionShuffle: "🎲 more"
     },
+
+    // Photobooth premade captions (each language has its own pool)
+    pbCaptionSuggestions: [
+      "love you to the moon and back 🌙",
+      "my favorite place is next to you",
+      "together even when apart 💕",
+      "you're my favorite thought",
+      "my favorite love in the whole world",
+      "missing you extra today",
+      "my heart lives over there with you",
+      "distance knows nothing 💪",
+      "meow means i love you in cat 🐱",
+      "so lucky i found you",
+      "my cute baby forever",
+      "counting days till i hug you",
+      "you + me = all good",
+      "love has no time zone ⏰",
+      "kittens and you: my favorites 🐱",
+      "promise to love you in every photo",
+      "this one's going on the wall 📌",
+      "cutest couple in the photobooth 😎",
+      "love you more than yesterday, less than tmrw",
+      "a day without seeing you = a wasted day"
+    ],
 
     // Photobooth pose prompts (index-synced with Portuguese)
     pbPrompts: [
