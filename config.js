@@ -162,7 +162,25 @@ const coupleConfig = {
       "Mostra os músculos 💪",
       "Olhinhos de gatinho pidão 🥺",
       "Carinha de sono 😴",
-      "Paz e língua pra fora ✌️😝"
+      "Paz e língua pra fora ✌️😝",
+      "Boquinha de peixinho 🐟",
+      "Abraça o ar como se fosse seu amor 🤗",
+      "Bochechas de baiacu 🐡",
+      "Duckface anos 2010 🦆",
+      "Desmaio dramático de novela 🎭",
+      "Choro falso bem dramático 😭",
+      "Sobrancelha de detetive desconfiado 🤨",
+      "Plano maligno em andamento 😈",
+      "Garrinhas de gato atacando a câmera 🐾",
+      "Bigode de dedo 🥸",
+      "Óculos de dedo 🤓",
+      "Foto 3x4 bem séria 🪪",
+      "Gargalhada exagerada 🤣",
+      "Espia por entre os dedos 🫣",
+      "Super-herói encarando o horizonte 🦸",
+      "Tchauzinho mais fofo do mundo 👋",
+      "Pose de pensador profundo 🤔",
+      "Estrela do rock 🤘"
     ],
 
     // Títulos de afinidade
@@ -356,7 +374,25 @@ const coupleConfig = {
       "Flex those muscles 💪",
       "Begging kitten eyes 🥺",
       "Sleepy baby face 😴",
-      "Peace & tongue out ✌️😝"
+      "Peace & tongue out ✌️😝",
+      "Fish-lips kiss 🐟",
+      "Hug the air like it's your love 🤗",
+      "Puffer-fish cheeks 🐡",
+      "Classic 2010s duckface 🦆",
+      "Dramatic soap-opera faint 🎭",
+      "Fakest dramatic cry 😭",
+      "Suspicious detective eyebrow 🤨",
+      "Evil plan in progress 😈",
+      "Kitty claws attack the camera 🐾",
+      "Finger mustache 🥸",
+      "Finger glasses 🤓",
+      "Dead-serious passport photo 🪪",
+      "Biggest fake laugh 🤣",
+      "Peek through your fingers 🫣",
+      "Superhero staring at the horizon 🦸",
+      "World's cutest little wave 👋",
+      "Deep-thinker pose 🤔",
+      "Rock star 🤘"
     ],
 
     // Affinity Titles in English
