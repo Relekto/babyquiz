@@ -448,6 +448,12 @@ class AffinityApp {
     this.pbFrame = 'classic';      // 'classic' | 'kitties' | 'night' | 'film'
     this.pbImgCache = null;        // fotos decodificadas (evita re-decodificar ao trocar moldura)
 
+    // Álbum secreto (repo privado no GitHub; token fica SÓ no localStorage do casal)
+    this.ALBUM_TOKEN_KEY = 'namorados_album_token';
+    this.albumUploadedNames = new Set(); // evita re-upload na mesma sessão
+    this.albumBusy = false;
+    this.pbSharedDateISO = null;   // data do host — nome de arquivo igual nos dois lados
+
     // Estado do Multiplayer P2P
     this.isMultiplayer = false;
     this.isHost = false;
@@ -610,6 +616,50 @@ class AffinityApp {
       this.returnToLobby();
     });
 
+    // Álbum secreto ☁️🔒
+    document.getElementById('btn-album-welcome').addEventListener('click', () => {
+      this.synth.playClickSound();
+      this.openAlbumModal(this.getAlbumToken() ? 'gallery' : 'setup');
+    });
+
+    document.getElementById('pb-btn-album').addEventListener('click', () => {
+      this.synth.playClickSound();
+      this.uploadPbStripToAlbum(false);
+    });
+
+    document.getElementById('album-btn-close').addEventListener('click', () => {
+      this.synth.playClickSound();
+      this.closeAlbumModal();
+    });
+
+    document.getElementById('album-modal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('album-modal')) this.closeAlbumModal();
+    });
+
+    document.getElementById('album-btn-save-token').addEventListener('click', () => {
+      this.synth.playClickSound();
+      this.saveAlbumTokenFromInput();
+    });
+
+    document.getElementById('album-token-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.saveAlbumTokenFromInput();
+      }
+    });
+
+    document.getElementById('album-btn-forget').addEventListener('click', () => {
+      this.synth.playClickSound();
+      this.setAlbumToken("");
+      this.showAlbumView('setup');
+    });
+
+    document.getElementById('album-btn-back').addEventListener('click', () => {
+      this.synth.playClickSound();
+      this.showAlbumView('gallery');
+      this.loadAlbumGallery();
+    });
+
     // Escolha: Jogar Online (Mostra painel MP)
     document.getElementById('btn-play-online').addEventListener('click', () => {
       this.synth.playClickSound();
@@ -753,6 +803,7 @@ class AffinityApp {
         } else if (this.gameMode === 'photobooth') {
           this.pbPromptIndices = this.pickPbPromptIndices(this.PB_TOTAL_SHOTS);
           this.pbSeed = Math.floor(Math.random() * 1e9) + 1;
+          this.pbSharedDateISO = this.getPbDateISO();
           this.conn.send({
             type: 'START_GAME',
             gameMode: 'photobooth',
@@ -761,7 +812,8 @@ class AffinityApp {
             pbSubMode: this.pbSubMode,
             pbFilter: this.pbFilter,
             pbPromptIndices: this.pbPromptIndices,
-            pbSeed: this.pbSeed
+            pbSeed: this.pbSeed,
+            pbDateISO: this.pbSharedDateISO
           });
           this.synth.startAmbientMusic();
           this.startPhotobooth();
@@ -1262,6 +1314,7 @@ class AffinityApp {
           this.pbFilter = data.pbFilter || 'none';
           this.pbPromptIndices = data.pbPromptIndices || [];
           this.pbSeed = data.pbSeed || 1;
+          this.pbSharedDateISO = data.pbDateISO || null;
           this.synth.startAmbientMusic();
           this.startPhotobooth();
           break;
@@ -1335,6 +1388,7 @@ class AffinityApp {
       case 'PB_RESTART':
         this.pbPromptIndices = data.pbPromptIndices || this.pbPromptIndices;
         this.pbSeed = data.pbSeed || this.pbSeed;
+        this.pbSharedDateISO = data.pbDateISO || this.pbSharedDateISO;
         this.resetPbRound();
         this.enterPbShootPhase();
         break;
@@ -2686,6 +2740,8 @@ class AffinityApp {
       console.error("Erro ao trocar a moldura:", e);
     } finally {
       img.classList.remove('pb-swapping');
+      // Moldura nova = arquivo novo no álbum — reabilita o botão de guardar
+      this.refreshAlbumBtn();
     }
   }
 
@@ -2780,6 +2836,19 @@ class AffinityApp {
     setText('pb-btn-again', ui.pbBtnAgain);
     setText('pb-btn-lobby', ui.pbBtnLobby);
     setText('pb-guest-wait-note', ui.pbGuestWaitHost);
+
+    // Álbum secreto
+    setText('btn-album-welcome', ui.albumBtnWelcome);
+    setText('lbl-album-setup-title', ui.albumSetupTitle);
+    setText('lbl-album-setup-desc', ui.albumSetupDesc);
+    setText('lbl-album-setup-how', ui.albumSetupHow);
+    const tokenInput = document.getElementById('album-token-input');
+    if (tokenInput) tokenInput.placeholder = ui.albumTokenPlaceholder;
+    setText('album-btn-save-token', ui.albumBtnSaveToken);
+    setText('lbl-album-gallery-title', ui.albumGalleryTitle);
+    setText('album-btn-forget', ui.albumForgetToken);
+    setText('album-btn-back', ui.albumViewerBack);
+    this.refreshAlbumBtn();
   }
 
   // ---------- Ciclo de vida ----------
@@ -2816,6 +2885,7 @@ class AffinityApp {
     document.getElementById('pb-strip-img').removeAttribute('src');
     document.getElementById('pb-strip-covers').innerHTML = "";
     document.getElementById('pb-frame-picker').classList.add('hidden');
+    this.setAlbumBtnState('idle');
   }
 
   // Nova rodada (mantém câmera e chamada de vídeo vivas)
@@ -3264,6 +3334,10 @@ class AffinityApp {
         this.synth.playFanfareSound();
         this.canvas.spawnBurst(window.innerWidth / 2, window.innerHeight / 2, 30);
       }
+
+      // Álbum: se a chave já está guardada, salva sozinho no cofre
+      this.refreshAlbumBtn();
+      this.uploadPbStripToAlbum(true);
     } catch (e) {
       console.error("Erro ao montar a tirinha:", e);
       document.getElementById('lbl-pb-reveal-desc').textContent = "😿 " + (e && e.message ? e.message : "erro");
@@ -3745,8 +3819,9 @@ class AffinityApp {
     if (!this.isHost) return;
     this.pbPromptIndices = this.pickPbPromptIndices(this.PB_TOTAL_SHOTS);
     this.pbSeed = Math.floor(Math.random() * 1e9) + 1;
+    this.pbSharedDateISO = this.getPbDateISO();
     if (this.conn && this.conn.open) {
-      this.conn.send({ type: 'PB_RESTART', pbPromptIndices: this.pbPromptIndices, pbSeed: this.pbSeed });
+      this.conn.send({ type: 'PB_RESTART', pbPromptIndices: this.pbPromptIndices, pbSeed: this.pbSeed, pbDateISO: this.pbSharedDateISO });
     }
     this.resetPbRound();
     this.enterPbShootPhase();
@@ -3794,6 +3869,228 @@ class AffinityApp {
     });
     this.pbMyReady = false;
     this.pbPartnerReady = false;
+  }
+
+  // ==========================================
+  // ÁLBUM SECRETO ☁️🔒 — repo privado no GitHub.
+  // O token NUNCA vai pro código do site: o casal cola uma vez
+  // e ele mora só no localStorage dos dois navegadores.
+  // ==========================================
+
+  getAlbumToken() {
+    return localStorage.getItem(this.ALBUM_TOKEN_KEY) || "";
+  }
+
+  setAlbumToken(token) {
+    if (token) localStorage.setItem(this.ALBUM_TOKEN_KEY, token);
+    else localStorage.removeItem(this.ALBUM_TOKEN_KEY);
+  }
+
+  getPbDateISO() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  // Chamada à API do GitHub com o token do casal
+  albumApi(path, options = {}) {
+    return fetch(`https://api.github.com${path}`, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${this.getAlbumToken()}`,
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        ...(options.headers || {})
+      }
+    });
+  }
+
+  // Nome determinístico: mesma seed + mesma moldura = MESMO arquivo
+  // nos dois lados (se os dois salvarem, não duplica).
+  albumStripName() {
+    const dateISO = this.pbSharedDateISO || this.getPbDateISO();
+    return `${albumConfig.folder}/${dateISO}_${this.pbSeed}_${this.pbFrame}.jpg`;
+  }
+
+  setAlbumBtnState(state) {
+    const btn = document.getElementById('pb-btn-album');
+    if (!btn) return;
+    const ui = this.config[this.currentLang].ui;
+    const labels = { idle: ui.albumBtnSave, saving: ui.albumBtnSaving, saved: ui.albumBtnSaved, error: ui.albumBtnError };
+    btn.textContent = labels[state] || ui.albumBtnSave;
+    btn.dataset.state = state;
+    btn.disabled = state === 'saving';
+  }
+
+  refreshAlbumBtn() {
+    if (this.pbPhase !== 'reveal') {
+      this.setAlbumBtnState('idle');
+      return;
+    }
+    this.setAlbumBtnState(this.albumUploadedNames.has(this.albumStripName()) ? 'saved' : 'idle');
+  }
+
+  async uploadPbStripToAlbum(isAuto) {
+    const token = this.getAlbumToken();
+    if (!token) {
+      if (!isAuto) this.openAlbumModal('setup');
+      return;
+    }
+    if (!this.pbStripCanvas || this.albumBusy || this.pbPhase !== 'reveal') return;
+    const name = this.albumStripName();
+    if (this.albumUploadedNames.has(name)) {
+      this.setAlbumBtnState('saved');
+      return;
+    }
+
+    this.albumBusy = true;
+    this.setAlbumBtnState('saving');
+    try {
+      const base64 = this.pbStripCanvas.toDataURL('image/jpeg', 0.92).split(',')[1];
+      const doPut = () => this.albumApi(`/repos/${albumConfig.repo}/contents/${name}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          message: `📸 ${name.split('/').pop()}`,
+          content: base64,
+          branch: albumConfig.branch
+        })
+      });
+      let res = await doPut();
+      if (res.status === 409) {
+        // Corrida com o outro lado subindo ao mesmo tempo — espera e tenta de novo
+        await new Promise(r => setTimeout(r, 1200));
+        res = await doPut();
+      }
+      if (res.status === 201 || res.status === 200 || res.status === 422 || res.status === 409) {
+        // 422/409 = o arquivo já existe (seu amor salvou primeiro) — sucesso do mesmo jeito
+        this.albumUploadedNames.add(name);
+        this.setAlbumBtnState('saved');
+      } else {
+        console.error("Álbum: upload falhou com status", res.status);
+        this.setAlbumBtnState('error');
+      }
+    } catch (e) {
+      console.error("Álbum: erro de rede no upload", e);
+      this.setAlbumBtnState('error');
+    } finally {
+      this.albumBusy = false;
+    }
+  }
+
+  // ---------- Modal do álbum ----------
+
+  openAlbumModal(view) {
+    document.getElementById('album-modal').classList.remove('hidden');
+    this.showAlbumView(view);
+    if (view === 'gallery') this.loadAlbumGallery();
+    if (view === 'setup') {
+      document.getElementById('album-setup-feedback').classList.add('hidden');
+      document.getElementById('album-token-input').value = "";
+    }
+  }
+
+  closeAlbumModal() {
+    document.getElementById('album-modal').classList.add('hidden');
+  }
+
+  showAlbumView(name) {
+    const views = { setup: 'album-setup-view', gallery: 'album-gallery-view', viewer: 'album-viewer-view' };
+    Object.values(views).forEach(id => document.getElementById(id).classList.remove('active'));
+    document.getElementById(views[name]).classList.add('active');
+  }
+
+  async saveAlbumTokenFromInput() {
+    const input = document.getElementById('album-token-input');
+    const fb = document.getElementById('album-setup-feedback');
+    const ui = this.config[this.currentLang].ui;
+    const token = input.value.trim();
+    if (!token) {
+      input.focus();
+      return;
+    }
+
+    fb.classList.remove('hidden');
+    fb.textContent = ui.albumGalleryLoading;
+    try {
+      // Valida a chave tentando enxergar o cofre
+      const res = await fetch(`https://api.github.com/repos/${albumConfig.repo}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
+      });
+      if (!res.ok) throw new Error('status ' + res.status);
+      this.setAlbumToken(token);
+      fb.textContent = ui.albumTokenSaved;
+      this.synth.playMatchSound();
+      this.refreshAlbumBtn();
+      setTimeout(() => {
+        this.showAlbumView('gallery');
+        this.loadAlbumGallery();
+      }, 900);
+    } catch (e) {
+      fb.textContent = ui.albumTokenInvalid;
+      this.synth.playMismatchSound();
+    }
+  }
+
+  async loadAlbumGallery() {
+    const ui = this.config[this.currentLang].ui;
+    const status = document.getElementById('album-gallery-status');
+    const list = document.getElementById('album-gallery-list');
+    status.textContent = ui.albumGalleryLoading;
+    list.innerHTML = "";
+    try {
+      const res = await this.albumApi(`/repos/${albumConfig.repo}/contents/${albumConfig.folder}?ref=${albumConfig.branch}`);
+      if (res.status === 404) {
+        status.textContent = ui.albumGalleryEmpty;
+        return;
+      }
+      if (!res.ok) throw new Error('status ' + res.status);
+      const items = (await res.json())
+        .filter(it => it.type === 'file' && it.name.endsWith('.jpg'))
+        .sort((a, b) => b.name.localeCompare(a.name));
+      if (!items.length) {
+        status.textContent = ui.albumGalleryEmpty;
+        return;
+      }
+      status.textContent = `${items.length} 📸💖`;
+      items.forEach(it => {
+        // Nome: YYYY-MM-DD_seed_moldura.jpg
+        const parts = it.name.replace('.jpg', '').split('_');
+        const [y, m, d] = (parts[0] || '').split('-');
+        const dateLabel = (y && m && d) ? `${d}.${m}.${y}` : it.name;
+        const frameLabel = (ui.albumFrameNames || {})[parts[2]] || '💖';
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'album-entry';
+        card.innerHTML = `<span class="album-entry-date">💌 ${dateLabel}</span><span class="album-entry-frame">${frameLabel}</span>`;
+        card.addEventListener('click', () => {
+          this.synth.playClickSound();
+          this.openAlbumViewer(it.path);
+        });
+        list.appendChild(card);
+      });
+    } catch (e) {
+      console.error("Álbum: erro ao listar", e);
+      status.textContent = ui.albumGalleryError;
+    }
+  }
+
+  async openAlbumViewer(path) {
+    const ui = this.config[this.currentLang].ui;
+    const status = document.getElementById('album-viewer-status');
+    const img = document.getElementById('album-viewer-img');
+    this.showAlbumView('viewer');
+    img.removeAttribute('src');
+    status.textContent = ui.albumViewerLoading;
+    try {
+      const res = await this.albumApi(`/repos/${albumConfig.repo}/contents/${encodeURI(path)}?ref=${albumConfig.branch}`);
+      if (!res.ok) throw new Error('status ' + res.status);
+      const data = await res.json();
+      img.src = `data:image/jpeg;base64,${(data.content || '').replace(/\n/g, '')}`;
+      status.textContent = "";
+    } catch (e) {
+      console.error("Álbum: erro ao abrir tirinha", e);
+      status.textContent = ui.albumGalleryError;
+    }
   }
 
   // Volta ambos os jogadores ao lobby conectado (sem derrubar a conexão),

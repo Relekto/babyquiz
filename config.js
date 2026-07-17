@@ -1,4 +1,14 @@
 // Configuração do Teste de Afinidade - Dia dos Namorados (Bilingue - UI e Títulos 💖)
+
+// Álbum na nuvem (repo PRIVADO no GitHub). O nome do repo é público aqui,
+// mas o conteúdo só abre com o token que o casal guarda no próprio navegador —
+// nada de segredo dentro do site.
+const albumConfig = {
+  repo: "Relekto/baby-strips",
+  branch: "main",
+  folder: "strips"
+};
+
 const coupleConfig = {
   pt: {
     defaultPlayer1Name: "Bebê 1",
@@ -146,7 +156,30 @@ const coupleConfig = {
       pbFrameNight: "Noturna",
       pbFrameFilm: "Filme",
       pbCaptionOrPick: "Ou toca numa prontinha ✨",
-      pbCaptionShuffle: "🎲 outras"
+      pbCaptionShuffle: "🎲 outras",
+
+      // Álbum na nuvem (repo privado)
+      albumBtnWelcome: "📖 Nosso Álbum",
+      albumBtnSave: "Guardar no Álbum ☁️",
+      albumBtnSaving: "Guardando... ☁️",
+      albumBtnSaved: "No Álbum! ✅",
+      albumBtnError: "Falhou 😿 toca pra tentar de novo",
+      albumSetupTitle: "Nosso Álbum Secreto ☁️🔒",
+      albumSetupDesc: "As tirinhas ficam guardadas num cofre privado no GitHub. Só vocês dois têm a chave — quem visita o site não vê nada.",
+      albumSetupHow: "Como criar a chave (só uma vez): github.com → Settings → Developer settings → Fine-grained tokens → escolhe SÓ o repo baby-strips com permissão Contents: Read and write → cola aqui e manda pro seu amor no privado 🤫",
+      albumTokenPlaceholder: "cola a chave secreta aqui...",
+      albumBtnSaveToken: "Guardar a Chave 🔑",
+      albumBtnCancel: "Fechar",
+      albumTokenSaved: "Chave guardada neste navegador! 🔒",
+      albumTokenInvalid: "Essa chave não abriu o cofre 😿 confere se copiou certinho!",
+      albumGalleryTitle: "Nosso Álbum 💖",
+      albumGalleryEmpty: "Ainda não tem nenhuma tirinha guardada... bora tirar fotos! 📸",
+      albumGalleryLoading: "Abrindo o cofrinho... 🐾",
+      albumGalleryError: "Não consegui abrir o álbum 😿 (a chave venceu?)",
+      albumViewerBack: "⬅️ Voltar",
+      albumViewerLoading: "Revelando... 🐾",
+      albumForgetToken: "Esquecer a chave deste navegador 🗑️",
+      albumFrameNames: { classic: "🌸 Rosinha", kitties: "🐱 Gatinhos", night: "🌙 Noturna", film: "🎞️ Filme" }
     },
 
     // Recadinhos prontos do Photobooth (cada idioma tem seu próprio pool)
@@ -384,7 +417,30 @@ const coupleConfig = {
       pbFrameNight: "Night Sky",
       pbFrameFilm: "Film",
       pbCaptionOrPick: "Or tap a ready-made one ✨",
-      pbCaptionShuffle: "🎲 more"
+      pbCaptionShuffle: "🎲 more",
+
+      // Cloud album (private repo)
+      albumBtnWelcome: "📖 Our Album",
+      albumBtnSave: "Keep in the Album ☁️",
+      albumBtnSaving: "Saving... ☁️",
+      albumBtnSaved: "In the Album! ✅",
+      albumBtnError: "Failed 😿 tap to try again",
+      albumSetupTitle: "Our Secret Album ☁️🔒",
+      albumSetupDesc: "The strips are kept in a private GitHub vault. Only you two hold the key — site visitors see nothing.",
+      albumSetupHow: "How to create the key (one time): github.com → Settings → Developer settings → Fine-grained tokens → select ONLY the baby-strips repo with Contents: Read and write → paste it here and send it to your love privately 🤫",
+      albumTokenPlaceholder: "paste the secret key here...",
+      albumBtnSaveToken: "Save the Key 🔑",
+      albumBtnCancel: "Close",
+      albumTokenSaved: "Key saved in this browser! 🔒",
+      albumTokenInvalid: "That key didn't open the vault 😿 check if you copied it right!",
+      albumGalleryTitle: "Our Album 💖",
+      albumGalleryEmpty: "No strips saved yet... let's take some photos! 📸",
+      albumGalleryLoading: "Opening the vault... 🐾",
+      albumGalleryError: "Couldn't open the album 😿 (did the key expire?)",
+      albumViewerBack: "⬅️ Back",
+      albumViewerLoading: "Developing... 🐾",
+      albumForgetToken: "Forget the key on this browser 🗑️",
+      albumFrameNames: { classic: "🌸 Pink", kitties: "🐱 Kitties", night: "🌙 Night", film: "🎞️ Film" }
     },
 
     // Photobooth premade captions (each language has its own pool)

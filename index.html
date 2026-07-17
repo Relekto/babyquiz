@@ -270,6 +270,8 @@
             <button type="button" id="btn-mp-cancel" class="btn btn-outline" style="margin-top: 15px;">⬅️ Cancelar</button>
           </div>
         </form>
+
+        <button type="button" id="btn-album-welcome" class="album-welcome-btn">📖 Nosso Álbum</button>
       </div>
     </section>
 
@@ -689,6 +691,7 @@
         </div>
         <div class="pb-reveal-actions">
           <button type="button" id="pb-btn-download" class="btn btn-primary btn-pulse">Salvar Foto 📥</button>
+          <button type="button" id="pb-btn-album" class="btn btn-secondary">Guardar no Álbum ☁️</button>
           <button type="button" id="pb-btn-again" class="btn btn-secondary">Mais uma Rodada! 🔄</button>
           <button type="button" id="pb-btn-lobby" class="btn btn-outline">Voltar ao Lobby 🏠</button>
         </div>
@@ -697,6 +700,45 @@
     </section>
 
   </main>
+
+  <!-- Álbum Secreto (modal) -->
+  <div id="album-modal" class="album-modal hidden">
+    <div class="album-modal-card glassmorphic">
+      <button type="button" id="album-btn-close" class="btn-chat-close album-close" aria-label="Fechar" title="Fechar">✕</button>
+
+      <!-- Configuração da chave -->
+      <div id="album-setup-view" class="album-view">
+        <div class="heart-pulse-container"><div class="heart-pulse-small">🔒</div></div>
+        <h2 class="pb-title" id="lbl-album-setup-title">Nosso Álbum Secreto ☁️🔒</h2>
+        <p class="pb-desc" id="lbl-album-setup-desc">As tirinhas ficam guardadas num cofre privado...</p>
+        <p class="album-howto" id="lbl-album-setup-how">Como criar a chave...</p>
+        <div class="input-group">
+          <input type="password" id="album-token-input" placeholder="cola a chave secreta aqui..." autocomplete="off">
+        </div>
+        <p id="album-setup-feedback" class="mp-waiting-text hidden"></p>
+        <button type="button" id="album-btn-save-token" class="btn btn-primary">Guardar a Chave 🔑</button>
+      </div>
+
+      <!-- Galeria -->
+      <div id="album-gallery-view" class="album-view">
+        <h2 class="pb-title" id="lbl-album-gallery-title">Nosso Álbum 💖</h2>
+        <p id="album-gallery-status" class="pb-desc">Abrindo o cofrinho... 🐾</p>
+        <div id="album-gallery-list" class="album-gallery-list">
+          <!-- Gerado dinamicamente -->
+        </div>
+        <button type="button" id="album-btn-forget" class="album-forget-btn">Esquecer a chave deste navegador 🗑️</button>
+      </div>
+
+      <!-- Visualização de uma tirinha -->
+      <div id="album-viewer-view" class="album-view">
+        <button type="button" id="album-btn-back" class="btn btn-outline album-back-btn">⬅️ Voltar</button>
+        <p id="album-viewer-status" class="pb-desc">Revelando... 🐾</p>
+        <div class="album-viewer-wrap">
+          <img id="album-viewer-img" alt="Tirinha 💖">
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Caixa de Chat (Multiplayer) -->
   <div id="mp-chat-container" class="mp-chat-container hidden collapsed">
@@ -727,9 +769,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="config.js?v=9"></script>
-  <script src="questions.js?v=9"></script>
-  <script src="blind_ranking.js?v=9"></script>
-  <script src="app.js?v=9"></script>
+  <script src="config.js?v=10"></script>
+  <script src="questions.js?v=10"></script>
+  <script src="blind_ranking.js?v=10"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>
